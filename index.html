@@ -494,8 +494,8 @@ body.dimmed #dimBtn { display:block; }
 <div id="s0" class="screen active">
   <div class="topbar">
     <div class="topbar-logo">
-      <span class="topbar-logo-word">LIVE MODE</span>
-      <span class="topbar-logo-sub">A Premium Experience</span>
+      <span class="topbar-logo-word">Concerto</span>
+      <span class="topbar-logo-sub">Live Mode</span>
     </div>
     <button class="icon-btn" id="helpBtn" title="How it works" style="font-size:13px">?</button>
   </div>
@@ -506,7 +506,7 @@ body.dimmed #dimBtn { display:block; }
     <input class="light-input" id="artistInput" type="text" placeholder="e.g. Noah Kahan" autocomplete="off" autocorrect="off" spellcheck="false"/>
     <div class="field-label">Venue</div>
     <input class="light-input" id="venueInput" type="text" placeholder="e.g. Madison Square Garden" autocomplete="off" autocorrect="off" spellcheck="false"/>
-    <button class="primary-btn" id="enterBtn" disabled>Enter Live Mode →</button>
+    <button class="primary-btn" id="enterBtn">Enter Live Mode →</button>
     <div class="divider"></div>
     <div class="recent-label">Your shows</div>
     <div id="recentList"></div>
@@ -1240,7 +1240,11 @@ function updateEnterBtn() {
   $('enterBtn').disabled = !($('artistInput').value.trim() && $('venueInput').value.trim());
 }
 $('artistInput').addEventListener('input', updateEnterBtn);
+$('artistInput').addEventListener('change', updateEnterBtn);
+$('artistInput').addEventListener('keyup', updateEnterBtn);
 $('venueInput').addEventListener('input', updateEnterBtn);
+$('venueInput').addEventListener('change', updateEnterBtn);
+$('venueInput').addEventListener('keyup', updateEnterBtn);
 $('artistInput').addEventListener('keydown', e=>{ if(e.key==='Enter') $('venueInput').focus(); });
 $('venueInput').addEventListener('keydown', e=>{ if(e.key==='Enter' && !$('enterBtn').disabled) enterLiveMode(); });
 $('enterBtn').addEventListener('click', enterLiveMode);
@@ -1764,6 +1768,7 @@ function dismissOnboarding(){
 // ── INIT ──
 loadSetlistCache();
 renderRecent();
+updateEnterBtn();
 // Show onboarding only on first visit
 try{
   if(!localStorage.getItem('lm_ob_seen')) setTimeout(showOnboarding,600);
