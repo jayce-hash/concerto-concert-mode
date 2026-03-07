@@ -33,6 +33,7 @@
 }
 
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+a { -webkit-touch-callout:none; }
 html, body { height:100%; overflow:hidden; }
 body {
   font-family: var(--body);
@@ -509,8 +510,8 @@ a { color:inherit; text-decoration:none; }
 <div id="s0" class="screen active">
   <div class="topbar">
     <div class="topbar-logo">
-      <span class="topbar-logo-word">Concerto</span>
-      <span class="topbar-logo-sub">Live Mode</span>
+      <span class="topbar-logo-word">CONCERTO - LIVE MODE</span>
+      <span class="topbar-logo-sub">A Premium Experience</span>
     </div>
     <button class="icon-btn" id="helpBtn" title="How it works" style="font-size:13px">?</button>
   </div>
@@ -1143,7 +1144,7 @@ const VENUE_DB = {
 
 // ── SETLIST CMS CONFIG ──
 // Paste your published Google Sheets CSV URL here (Setlists tab)
-const SETLIST_CSV_URL = 'PASTE_YOUR_SETLIST_SHEET_URL_HERE';
+const SETLIST_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSm2gnAFEbsug_Bf846-woRhgImNk7bWAHiLjlYHNZQnu89VgX0ZMtlnEVmFISDvw/pub?gid=22117132&single=true&output=csv';
 
 // Runtime setlist cache — populated on load from Sheets
 const SETLIST_CACHE = {}; // keyed by artist lowercase
@@ -1403,7 +1404,7 @@ function findVenue(query) {
 }
 function makeVenueLink(url, label) {
   if (!url) return `<span style="color:var(--ink-3)">${label}</span>`;
-  return `<button onclick="window.open('${url}','_blank')" style="color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;font-size:12px;background:none;border:none;cursor:pointer;padding:0;font-family:var(--body)">${label} ↗</button>`;
+  return `<a href="${url}" target="_blank" rel="noopener" style="color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;font-size:12px;-webkit-touch-callout:none">${label} ↗</a>`;
 }
 function loadVenueData() {
   $('venueDisplayName').textContent = S.venue;
@@ -1835,48 +1836,59 @@ async function generateStoryCard() {
 
   // ── EXPORT ──
   const dataUrl = canvas.toDataURL('image/jpeg', 0.93);
+  showStoryOverlay(dataUrl);
+}
 
-  // Mobile: try native share sheet (iOS/Android)
-  if (navigator.canShare) {
-    try {
-      const res  = await fetch(dataUrl);
-      const blob = await res.blob();
-      const file = new File([blob], 'concerto-live-mode.jpg', { type: 'image/jpeg' });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: `${S.artist} — Concerto Live Mode` });
-        showToast('Story card shared ✦');
-        return;
-      }
-    } catch(e) {
-      if (e.name === 'AbortError') return; // user cancelled — do nothing
-    }
-  }
+function showStoryOverlay(dataUrl) {
+  // Remove any existing overlay
+  const existing = document.getElementById('storyOverlay');
+  if (existing) existing.remove();
 
-  // Fallback: open image in new tab — press & hold on mobile to save, right-click on desktop
-  const win = window.open('', '_blank');
-  if (win) {
-    win.document.write(`
-      <style>
-        * { box-sizing:border-box; margin:0; padding:0; }
-        body { background:#0E1A2B; display:flex; flex-direction:column;
-               align-items:center; justify-content:center; min-height:100vh;
-               font-family:-apple-system,sans-serif; padding:20px; gap:16px; }
-        img  { max-height:85vh; max-width:100%; object-fit:contain; border-radius:16px;
-               box-shadow:0 20px 60px rgba(0,0,0,.5); }
-        p    { color:rgba(248,249,249,.4); font-size:14px; text-align:center; line-height:1.6; }
-        strong { color:rgba(248,249,249,.7); }
-      </style>
-      <img src="${dataUrl}" alt="Concert recap"/>
-      <p><strong>On mobile:</strong> press & hold the image → Save to Photos<br>
-         <strong>On desktop:</strong> right-click → Save Image As</p>`);
-  } else {
-    // Popup blocked — download directly
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `concerto-${S.artist.toLowerCase().replace(/\s+/g,'-')}.jpg`;
-    a.click();
-    showToast('Story card downloaded ✦');
-  }
+  const overlay = document.createElement('div');
+  overlay.id = 'storyOverlay';
+  overlay.style.cssText = `
+    position:fixed; inset:0; z-index:600;
+    background:#0E1A2B;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:0;
+  `;
+
+  overlay.innerHTML = `
+    <div style="
+      position:absolute; top:0; left:0; right:0;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:16px 20px;
+      background:linear-gradient(to bottom, rgba(14,26,43,1) 0%, transparent 100%);
+      z-index:2;
+    ">
+      <div style="font-family:'Playfair Display',serif;font-size:16px;color:rgba(248,249,249,.7)">Your Story Card</div>
+      <button id="storyOverlayClose" style="
+        width:36px;height:36px;border-radius:50%;
+        background:rgba(248,249,249,.12);border:1px solid rgba(248,249,249,.18);
+        color:#F8F9F9;font-size:16px;display:grid;place-items:center;cursor:pointer;
+      ">✕</button>
+    </div>
+    <img src="${dataUrl}" style="
+      width:100%; max-width:420px;
+      max-height:calc(100vh - 120px);
+      object-fit:contain;
+      display:block;
+    "/>
+    <div style="
+      position:absolute; bottom:0; left:0; right:0;
+      padding:20px 24px 36px;
+      background:linear-gradient(to top, rgba(14,26,43,1) 0%, transparent 100%);
+      text-align:center; z-index:2;
+    ">
+      <div style="font-size:13px;color:rgba(248,249,249,.5);line-height:1.7;">
+        Press &amp; hold the image to save it to your camera roll,<br>then share to your Instagram Story.
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  document.getElementById('storyOverlayClose').addEventListener('click', () => overlay.remove());
 }
 
 // Helper: rounded rect path
