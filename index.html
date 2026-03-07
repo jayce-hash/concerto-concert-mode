@@ -42,8 +42,6 @@ body {
   position: fixed; width: 100%;
   transition: filter .6s ease;
 }
-/* Dimmer — stays dark */
-body.dimmed { filter: brightness(0.25); }
 button { cursor:pointer; background:none; border:none; color:inherit; font-family:var(--body); }
 a { color:inherit; text-decoration:none; }
 
@@ -168,6 +166,13 @@ a { color:inherit; text-decoration:none; }
 }
 .scrapbook-meta { font-size:11px; color:var(--ink-3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .scrapbook-arrow { color:var(--ink-3); font-size:14px; flex-shrink:0; }
+.scrapbook-del {
+  flex-shrink:0; width:28px; height:28px; border-radius:50%;
+  background:var(--bg-2); border:1px solid var(--card-b);
+  color:var(--ink-3); font-size:11px; display:grid; place-items:center;
+  cursor:pointer; transition:all .15s;
+}
+.scrapbook-del:hover { background:var(--red); color:white; border-color:var(--red); }
 
 /* ══ SCREEN 1 — LIVE MODE ══ */
 .show-header {
@@ -444,10 +449,13 @@ a { color:inherit; text-decoration:none; }
   transform:translateY(60px); transition:transform .45s var(--spring);
 }
 .onboarding-overlay.open .onboarding-sheet { transform:translateY(0); }
-.onboarding-slides { display:flex; overflow:hidden; width:100%; }
+.onboarding-slides { width:100%; }
 .onboarding-slide {
-  min-width:100%; padding:0 28px 28px;
-  display:flex; flex-direction:column; align-items:center; text-align:center;
+  display:none; padding:0 28px 28px;
+  flex-direction:column; align-items:center; text-align:center;
+}
+.onboarding-slide.active {
+  display:flex;
 }
 .ob-visual {
   width:100%; aspect-ratio:16/9; border-radius:var(--r-md); margin-bottom:24px;
@@ -484,13 +492,6 @@ a { color:inherit; text-decoration:none; }
   z-index:400; pointer-events:none; box-shadow:0 8px 24px rgba(14,26,43,.25);
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
-
-/* ── DIM OVERLAY ── */
-#dimBtn {
-  position:fixed; inset:0; z-index:300; background:transparent;
-  border:none; display:none; cursor:pointer;
-}
-body.dimmed #dimBtn { display:block; }
 
 /* Canvas for IG story (hidden) */
 #storyCanvas { display:none; }
@@ -542,11 +543,6 @@ body.dimmed #dimBtn { display:block; }
 <div id="s1" class="screen">
   <div class="topbar">
     <button id="backBtn" style="font-size:13px;font-weight:600;color:var(--ink-3);display:flex;align-items:center;gap:6px;transition:color .18s" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink-3)'">← Back</button>
-    <div class="topbar-right">
-      <button class="icon-btn" id="pasteSetlistBtn" title="Paste setlist">✎</button>
-      <button class="icon-btn" id="endShowBtn" title="End show" style="font-size:12px">End</button>
-      <button class="icon-btn" id="dimToggle" title="Dim screen">☽</button>
-    </div>
   </div>
   <div class="show-header">
     <div class="show-artist" id="showArtist">—</div>
@@ -557,6 +553,7 @@ body.dimmed #dimBtn { display:block; }
     <button class="tnav active" data-tab="setlist">Setlist</button>
     <button class="tnav" data-tab="venue">Venue</button>
     <button class="tnav" data-tab="moments">Photos</button>
+    <button class="tnav" data-tab="recap">Recap ✦</button>
   </div>
   <div class="scroll-area" style="padding-top:18px">
 
@@ -574,10 +571,6 @@ body.dimmed #dimBtn { display:block; }
         <div class="progress-label" id="progressLabel">0 played</div>
       </div>
       <div class="song-list" id="songList"></div>
-      <div class="add-song-row" style="margin-top:16px">
-        <input class="add-song-input" id="addSongInput" type="text" placeholder="Add a song…" autocomplete="off"/>
-        <button class="add-song-btn" id="addSongBtn">+</button>
-      </div>
     </div>
 
     <!-- VENUE -->
@@ -609,62 +602,31 @@ body.dimmed #dimBtn { display:block; }
         <div class="moments-empty-title">Your memories live here</div>
         <div class="moments-empty-sub">Tap to add a photo from tonight. Each one is timestamped and saved to this show.</div>
       </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════
-     SCREEN 2 — KEEPSAKE
-══════════════════════════════════════ -->
-<div id="s2" class="screen">
-  <div class="topbar">
-    <div class="topbar-logo">
-      <span class="topbar-logo-word">CONCERTO - LIVE MODE</span>
-      <span class="topbar-logo-sub">A Premium Experience</span>
-    </div>
-    <div class="topbar-right">
-      <button class="icon-btn" id="psShareText" title="Share setlist" style="font-size:12px">↑</button>
-    </div>
-  </div>
-  <div class="scroll-area" style="padding-top:0;padding-left:0;padding-right:0">
-    <div class="keepsake-hero" id="keepsakeHero">
-      <div class="keepsake-hero-img" id="keepsakeHeroImg"></div>
-      <div class="keepsake-hero-overlay">
-        <div class="keepsake-eyebrow" id="ksDate">—</div>
-        <div class="keepsake-artist" id="ksArtist">—</div>
-        <div class="keepsake-venue" id="ksVenue">—</div>
+    <!-- RECAP -->
+    <div class="tab-panel" id="tab-recap" style="padding:0 0 60px">
+      <div class="keepsake-hero" id="keepsakeHero" style="border-radius:0">
+        <div class="keepsake-hero-img" id="keepsakeHeroImg"></div>
+        <div class="keepsake-hero-overlay">
+          <div class="keepsake-eyebrow" id="ksDate">—</div>
+          <div class="keepsake-artist" id="ksArtist">—</div>
+          <div class="keepsake-venue" id="ksVenue">—</div>
+        </div>
+      </div>
+      <div class="keepsake-stats" id="ksStats"></div>
+      <div class="keepsake-section" id="ksPhotosWrap" style="display:none">
+        <div class="keepsake-section-label">From the night</div>
+        <div class="keepsake-photo-grid" id="ksPhotoGrid"></div>
+      </div>
+      <div class="keepsake-section" id="ksSetlistWrap" style="display:none">
+        <div class="keepsake-section-label">Played tonight</div>
+        <div id="ksSetlist"></div>
+      </div>
+      <div style="padding:20px 20px 0">
+        <button class="postshow-btn insta" id="psInstagram">Save story card ✦</button>
+        <button class="postshow-btn ghost" id="psNewShow">New show →</button>
       </div>
     </div>
-    <div class="keepsake-stats" id="ksStats"></div>
-    <div class="keepsake-section" id="ksPhotosWrap" style="display:none">
-      <div class="keepsake-section-label">From the night</div>
-      <div class="keepsake-photo-grid" id="ksPhotoGrid"></div>
-    </div>
-    <div class="keepsake-section" id="ksSetlistWrap" style="display:none">
-      <div class="keepsake-section-label">Played tonight</div>
-      <div id="ksSetlist"></div>
-    </div>
-    <div style="padding:24px 20px 60px">
-      <button class="postshow-btn insta" id="psInstagram">Share to Instagram Story ✦</button>
-      <button class="postshow-btn primary" id="psConcertoPlus">Plan next night with Concerto+ ✦</button>
-      <button class="postshow-btn ghost" id="psShareText2">Copy recap ↑</button>
-      <button class="postshow-btn ghost" id="psNewShow">New show →</button>
-    </div>
-  </div>
-</div>
 
-<!-- ── PASTE SETLIST MODAL ── -->
-<div class="modal-overlay" id="pasteModal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Paste your setlist</div>
-    <div class="modal-sub">Copy from Setlist.fm or anywhere. One song per line.</div>
-    <textarea class="paste-textarea" id="pasteTextarea" placeholder="Mr. Brightside&#10;Human&#10;Somebody Told Me…"></textarea>
-    <div class="modal-actions">
-      <button class="modal-btn ghost" id="pasteCancelBtn">Cancel</button>
-      <button class="modal-btn primary" id="pasteConfirmBtn">Load setlist →</button>
-    </div>
   </div>
 </div>
 
@@ -696,7 +658,7 @@ body.dimmed #dimBtn { display:block; }
     <div class="onboarding-slides" id="obSlides">
 
       <!-- Slide 0 -->
-      <div class="onboarding-slide">
+      <div class="onboarding-slide active">
         <div class="ob-visual" style="background:var(--navy);margin-top:16px">
           <div class="ob-visual-inner">
             <div style="font-family:'Playfair Display',serif;font-size:28px;font-style:italic;color:#F8F9F9;line-height:1.1;margin-bottom:8px">Your show.<br>Your scrapbook.</div>
@@ -731,7 +693,7 @@ body.dimmed #dimBtn { display:block; }
         </div>
         <div class="ob-num">02 / 04</div>
         <div class="ob-title">Track every<br><em>song as it plays</em></div>
-        <div class="ob-body">We load the setlist where we have it. Tap each song as it's performed — or paste the full setlist from Setlist.fm.</div>
+        <div class="ob-body">We load the setlist automatically where we have it. Tap each song as it plays to track your way through the night.</div>
       </div>
 
       <!-- Slide 2 -->
@@ -784,7 +746,6 @@ body.dimmed #dimBtn { display:block; }
 
 </div><!-- end #app -->
 
-<button id="dimBtn" onclick="toggleDim()"></button>
 <div class="toast" id="toast"></div>
 <canvas id="storyCanvas"></canvas>
 
@@ -1249,7 +1210,7 @@ function loadPhotos(artist) {
 }
 
 // ── SCREENS ──
-const SCREENS = [$('s0'),$('s1'),$('s2')];
+const SCREENS = [$('s0'),$('s1')];
 function goTo(idx) {
   SCREENS.forEach((s,i) => {
     s.classList.remove('active','exit');
@@ -1336,9 +1297,17 @@ function renderRecent() {
           <div class="scrapbook-artist">${h.artist}</div>
           <div class="scrapbook-meta">${h.venue} · ${date}${badge}</div>
         </div>
-        <div class="scrapbook-arrow">→</div>
+        <button class="scrapbook-del" onclick="event.stopPropagation();deleteShow(${i})" title="Remove show">✕</button>
       </div>`;
   }).join('');
+}
+
+function deleteShow(i) {
+  S.history = loadHistory();
+  const removed = S.history.splice(i, 1)[0];
+  try { localStorage.setItem('lm_history', JSON.stringify(S.history)); } catch{}
+  showToast(`${removed.artist} removed`);
+  renderRecent();
 }
 
 function loadRecent(i) {
@@ -1420,17 +1389,6 @@ function updateProgress() {
   $('progressLabel').textContent = `${S.playedCount} of ${S.songs.length} played`;
 }
 
-$('addSongBtn').addEventListener('click', addSong);
-$('addSongInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addSong(); });
-function addSong() {
-  const val = $('addSongInput').value.trim(); if(!val) return;
-  S.songs.push({name:val, played:false, custom:true});
-  $('addSongInput').value='';
-  $('progressWrap').style.display='flex';
-  renderSongs(); updateProgress();
-  showToast(`"${val}" added`);
-}
-
 // ── VENUE ──
 function findVenue(query) {
   const q = query.toLowerCase().trim();
@@ -1446,7 +1404,7 @@ function findVenue(query) {
 }
 function makeVenueLink(url, label) {
   if (!url) return `<span style="color:var(--ink-3)">${label}</span>`;
-  return `<a href="${url}" target="_blank" rel="noopener" style="color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;font-size:12px">${label} ↗</a>`;
+  return `<button onclick="window.open('${url}','_blank')" style="color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;font-size:12px;background:none;border:none;cursor:pointer;padding:0;font-family:var(--body)">${label} ↗</button>`;
 }
 function loadVenueData() {
   $('venueDisplayName').textContent = S.venue;
@@ -1517,43 +1475,20 @@ function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelector(`.tnav[data-tab="${name}"]`).classList.add('active');
   document.getElementById(`tab-${name}`).classList.add('active');
+  if (name === 'recap') renderKeepsake();
 }
 document.querySelectorAll('.tnav').forEach(tab=>tab.addEventListener('click',()=>switchTab(tab.dataset.tab)));
 
 // ── DIM ──
-function toggleDim() { document.body.classList.toggle('dimmed'); $('dimToggle').classList.toggle('active'); }
-$('dimToggle').addEventListener('click', toggleDim);
-
+function toggleDim() {} // removed
 // ── BACK ──
 $('backBtn').addEventListener('click', ()=>{
-  if(document.body.classList.contains('dimmed')) toggleDim();
   goTo(0); renderRecent();
 });
 
-// ── PASTE SETLIST ──
-$('pasteSetlistBtn').addEventListener('click', ()=>{ $('pasteTextarea').value=''; $('pasteModal').classList.add('open'); setTimeout(()=>$('pasteTextarea').focus(),400); });
-$('pasteCancelBtn').addEventListener('click', ()=>$('pasteModal').classList.remove('open'));
-$('pasteModal').addEventListener('click', e=>{ if(e.target===$('pasteModal')) $('pasteModal').classList.remove('open'); });
-$('pasteConfirmBtn').addEventListener('click', ()=>{
-  const raw=$('pasteTextarea').value.trim(); if(!raw) return;
-  const songs=raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0)
-    .map(l=>l.replace(/^[\d]+[\.\)]\s*/,'').replace(/^[-•*]\s*/,'').trim()).filter(l=>l.length>0);
-  if(!songs.length){ showToast('No songs found — try again'); return; }
-  S.songs=songs.map(name=>({name,played:false,custom:false}));
-  S.playedCount=0;
-  $('setlistStatusTitle').textContent='Setlist loaded';
-  $('setlistStatusSub').textContent=`${songs.length} songs · tap to mark as played`;
-  $('progressWrap').style.display='flex';
-  renderSongs(); updateProgress(); switchTab('setlist');
-  $('pasteModal').classList.remove('open');
-  showToast(`${songs.length} songs loaded ✦`);
-});
-
 // ── END SHOW ──
-$('endShowBtn').addEventListener('click', ()=>{
-  if(document.body.classList.contains('dimmed')) toggleDim();
-  renderKeepsake(); goTo(2);
-});
+// ── RECAP TAB ──
+// renderKeepsake is called when user switches to recap tab
 
 // ── KEEPSAKE ──
 function renderKeepsake() {
@@ -1902,6 +1837,7 @@ async function generateStoryCard() {
   // ── EXPORT ──
   const dataUrl = canvas.toDataURL('image/jpeg', 0.93);
 
+  // Mobile: try native share sheet (iOS/Android)
   if (navigator.canShare) {
     try {
       const res  = await fetch(dataUrl);
@@ -1909,22 +1845,39 @@ async function generateStoryCard() {
       const file = new File([blob], 'concerto-live-mode.jpg', { type: 'image/jpeg' });
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: `${S.artist} — Concerto Live Mode` });
+        showToast('Story card shared ✦');
         return;
       }
-    } catch {}
+    } catch(e) {
+      if (e.name === 'AbortError') return; // user cancelled — do nothing
+    }
   }
 
-  // Fallback
-  const win = window.open();
-  win.document.write(`
-    <style>
-      body { margin:0; background:#080D16; display:flex; flex-direction:column;
-             align-items:center; justify-content:center; min-height:100vh; font-family:sans-serif; }
-      img  { max-height:95vh; max-width:100vw; object-fit:contain; border-radius:12px; }
-      p    { color:rgba(255,255,255,.4); font-size:13px; margin-top:14px; text-align:center; }
-    </style>
-    <img src="${dataUrl}"/>
-    <p>Press & hold to save · then share to your Instagram Story</p>`);
+  // Fallback: open image in new tab — press & hold on mobile to save, right-click on desktop
+  const win = window.open('', '_blank');
+  if (win) {
+    win.document.write(`
+      <style>
+        * { box-sizing:border-box; margin:0; padding:0; }
+        body { background:#0E1A2B; display:flex; flex-direction:column;
+               align-items:center; justify-content:center; min-height:100vh;
+               font-family:-apple-system,sans-serif; padding:20px; gap:16px; }
+        img  { max-height:85vh; max-width:100%; object-fit:contain; border-radius:16px;
+               box-shadow:0 20px 60px rgba(0,0,0,.5); }
+        p    { color:rgba(248,249,249,.4); font-size:14px; text-align:center; line-height:1.6; }
+        strong { color:rgba(248,249,249,.7); }
+      </style>
+      <img src="${dataUrl}" alt="Concert recap"/>
+      <p><strong>On mobile:</strong> press & hold the image → Save to Photos<br>
+         <strong>On desktop:</strong> right-click → Save Image As</p>`);
+  } else {
+    // Popup blocked — download directly
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `concerto-${S.artist.toLowerCase().replace(/\s+/g,'-')}.jpg`;
+    a.click();
+    showToast('Story card downloaded ✦');
+  }
 }
 
 // Helper: rounded rect path
@@ -1942,39 +1895,15 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-// ── SHARE TEXT ──
-async function shareText() {
-  const played=S.songs.filter(s=>s.played).map((s,i)=>`${i+1}. ${s.name}`);
-  const text=[
-    `${S.artist} at ${S.venue}`,
-    new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}),
-    played.length?`\nSetlist:\n${played.join('\n')}` : '',
-    '\nCaptured with Concerto Live Mode — concertocity.com'
-  ].filter(Boolean).join('\n');
-  try {
-    if(navigator.share) await navigator.share({title:`${S.artist} — Live Mode`,text});
-    else { await navigator.clipboard.writeText(text); showToast('Recap copied ✦'); }
-  } catch { showToast('Share canceled'); }
-}
-$('psShareText').addEventListener('click', shareText);
-$('psShareText2').addEventListener('click', shareText);
 
-// ── CONCERTO+ ──
-$('psConcertoPlus').addEventListener('click', ()=>{
-  window.open('https://app.buildfire.com/?appId=8ef92dbd-0a8b-11f0-a97f-12565309935d#/pluginControl/169d5e94-6c5e-4769-b4ca-a7d0175985e7/169d5e94-6c5e-4769-b4ca-a7d0175985e7-1753914028797/Concerto+/64/false','_blank');
-});
-
-// ── NEW SHOW ──
 $('psNewShow').addEventListener('click', ()=>{
   S.songs=[]; S.photos=[]; S.playedCount=0;
   $('artistInput').value=''; $('venueInput').value='';
-  updateEnterBtn();
   const ov=document.getElementById('ksNoPhotoOverlay'); if(ov) ov.remove();
   renderRecent(); goTo(0);
 });
 
 
-// ── ONBOARDING ──
 let obSlide=0;
 const OB_TOTAL=4;
 
@@ -1988,11 +1917,11 @@ function updateDots(){
   }
 }
 function scrollToSlide(n){
-  obSlide=n; updateDots();
-  const slides=$('obSlides');
-  slides.style.transform=`translateX(-${n*100}%)`;
-  slides.style.transition='transform .4s cubic-bezier(.16,1,.3,1)';
-  $('obNext').textContent=n===OB_TOTAL-1?'Get started →':'Next →';
+  obSlide = n; updateDots();
+  document.querySelectorAll('.onboarding-slide').forEach((s, i) => {
+    s.classList.toggle('active', i === n);
+  });
+  $('obNext').textContent = n === OB_TOTAL - 1 ? 'Get started →' : 'Next →';
 }
 $('obNext').addEventListener('click',()=>{
   if(obSlide<OB_TOTAL-1){ scrollToSlide(obSlide+1); }
