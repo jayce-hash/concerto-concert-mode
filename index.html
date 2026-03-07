@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#080D16"/>
+<title>Concert Mode — Concerto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:        #080D16;
+  --bg-2:      #0E1520;
+  --bg-3:      #141C2A;
+  --ink:       #0E1A2B;
+  --snow:      rgba(248,249,249,1);
+  --snow-2:    rgba(248,249,249,.65);
+  --snow-3:    rgba(248,249,249,.28);
+  --snow-4:    rgba(248,249,249,.10);
+  --snow-5:    rgba(248,249,249,.05);
+  --gold:      #C9A96E;
+  --gold-soft: rgba(201,169,110,.12);
+  --gold-line: rgba(201,169,110,.28);
+  --card:      rgba(255,255,255,.05);
+  --card-b:    rgba(248,249,249,.08);
+  --card-b2:   rgba(248,249,249,.14);
+  --red:       #E05555;
+  --green:     #5DBF8A;
+
+  --r-sm: 14px; --r-md: 20px; --r-lg: 28px;
+  --display: 'Playfair Display', Georgia, serif;
+  --body:    'DM Sans', system-ui, sans-serif;
+  --spring: cubic-bezier(.16,1,.3,1);
+}
+
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; overflow:hidden; }
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--snow);
+  -webkit-font-smoothing: antialiased;
+  position: fixed; width: 100%;
+  transition: filter .6s ease;
+}
+body.dimmed { filter: brightness(0.35); }
+body.dimmed #dimBtn { opacity: 1; }
+button { cursor:pointer; background:none; border:none; color:inherit; font-family:var(--body); }
+a { color:inherit; text-decoration:none; }
+
+/* ── APP SHELL ── */
+#app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── BACKGROUND PULSE ── */
+.bg-orb {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(80px);
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+.bg-orb.visible { opacity: 1; }
+.bg-orb-1 { width: 400px; height: 400px; top: -100px; right: -100px; background: radial-gradient(circle, rgba(201,169,110,.08) 0%, transparent 70%); animation: orb-drift-1 12s ease-in-out infinite; }
+.bg-orb-2 { width: 300px; height: 300px; bottom: 0; left: -80px; background: radial-gradient(circle, rgba(14,26,43,.4) 0%, transparent 70%); animation: orb-drift-2 15s ease-in-out infinite; }
+@keyframes orb-drift-1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-20px,20px)} }
+@keyframes orb-drift-2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(15px,-15px)} }
+
+/* ── TOPBAR ── */
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 10px;
+  position: relative; z-index: 10;
+}
+.topbar-logo { display:flex; flex-direction:column; gap:1px; }
+.topbar-logo-word { font-family:var(--display); font-size:17px; font-weight:700; color:var(--snow); letter-spacing:.02em; line-height:1; }
+.topbar-logo-sub  { font-size:9px; font-weight:600; letter-spacing:.2em; color:var(--gold); text-transform:uppercase; }
+
+.topbar-right { display:flex; align-items:center; gap:8px; }
+.icon-btn {
+  width:36px; height:36px; border-radius:50%;
+  background: var(--card); border:1px solid var(--card-b);
+  display:grid; place-items:center;
+  color: var(--snow-2); font-size:15px;
+  transition: background .18s, transform .18s var(--spring), border-color .18s;
+  backdrop-filter: blur(8px);
+}
+.icon-btn:hover  { background:var(--card-b2); border-color:var(--card-b2); transform:scale(1.06); }
+.icon-btn:active { transform:scale(.94); }
+.icon-btn.active { background:var(--gold-soft); border-color:var(--gold-line); color:var(--gold); }
+
+/* ── SCREENS ── */
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transition: opacity .32s var(--spring), transform .32s var(--spring);
+  transform: translateY(14px);
+  overflow: hidden; height: 100dvh;
+  z-index: 1;
+}
+.screen.active   { opacity:1; pointer-events:all; transform:translateY(0); }
+.screen.exit     { opacity:0; transform:translateY(-10px); pointer-events:none; }
+
+/* ── SCROLL AREA ── */
+.scroll-area {
+  flex: 1 1 auto; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 0 20px 40px;
+  scrollbar-width: none;
+  position: relative; z-index: 1;
+}
+.scroll-area::-webkit-scrollbar { display:none; }
+
+/* ══════════════════════════════════════
+   SCREEN 0 — SETUP
+══════════════════════════════════════ */
+
+/* Hero */
+.setup-eyebrow {
+  font-size: 10px; font-weight: 600; letter-spacing: .2em;
+  color: var(--gold); text-transform: uppercase; margin-bottom: 10px;
+}
+.setup-headline {
+  font-family: var(--display);
+  font-size: 36px; font-weight: 700; line-height: 1.08;
+  color: var(--snow); letter-spacing: -.01em; margin-bottom: 10px;
+}
+.setup-headline em { font-style:italic; color:var(--snow-2); }
+.setup-sub { font-size:14px; color:var(--snow-2); line-height:1.55; margin-bottom:28px; }
+
+/* Input */
+.field-label {
+  font-size: 10px; font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--snow-3); margin-bottom: 8px;
+}
+.dark-input {
+  width: 100%; padding: 15px 18px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--card-b);
+  background: var(--card);
+  font-size: 15px; color: var(--snow);
+  outline: none; margin-bottom: 14px;
+  backdrop-filter: blur(8px);
+  transition: border-color .2s, box-shadow .2s;
+  -webkit-appearance: none; font-family: var(--body);
+}
+.dark-input::placeholder { color: var(--snow-3); }
+.dark-input:focus { border-color: var(--gold-line); box-shadow: 0 0 0 3px var(--gold-soft); }
+
+/* Primary btn */
+.primary-btn {
+  width: 100%; padding: 17px;
+  border-radius: var(--r-md);
+  background: var(--snow); color: var(--ink);
+  font-size: 15px; font-weight: 600; letter-spacing: .02em;
+  text-align: center;
+  transition: background .2s, transform .2s var(--spring), box-shadow .2s;
+  box-shadow: 0 8px 28px rgba(248,249,249,.1);
+  position: relative; overflow: hidden;
+}
+.primary-btn::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(255,255,255,.12) 0%,transparent 100%); pointer-events:none; }
+.primary-btn:hover  { transform:translateY(-1px); box-shadow:0 12px 36px rgba(248,249,249,.15); }
+.primary-btn:active { transform:scale(.99); }
+.primary-btn:disabled { opacity:.3; cursor:not-allowed; transform:none; }
+
+.divider { height:1px; background:var(--card-b); margin:22px 0; }
+
+/* Recent shows */
+.recent-label {
+  font-size: 10px; font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--snow-3); margin-bottom: 12px;
+}
+.recent-card {
+  background: var(--card); border: 1px solid var(--card-b);
+  border-radius: var(--r-md); padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer; margin-bottom: 8px;
+  transition: background .18s, border-color .18s, transform .18s var(--spring);
+  backdrop-filter: blur(8px);
+}
+.recent-card:hover  { background:var(--card-b); border-color:var(--card-b2); transform:translateX(3px); }
+.recent-card:active { transform:scale(.99); }
+.recent-card-dot {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--gold-soft); border: 1px solid var(--gold-line);
+  display: grid; place-items: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.recent-card-info { flex:1; min-width:0; }
+.recent-card-artist { font-family:var(--display); font-size:16px; font-weight:500; color:var(--snow); line-height:1.2; }
+.recent-card-meta   { font-size:12px; color:var(--snow-3); margin-top:2px; }
+.recent-card-arrow  { font-size:16px; color:var(--snow-3); }
+
+/* ══════════════════════════════════════
+   SCREEN 1 — CONCERT MODE
+══════════════════════════════════════ */
+
+/* Artist header */
+.show-header {
+  padding: 0 20px 18px;
+  border-bottom: 1px solid var(--card-b);
+  position: relative; z-index: 1; flex-shrink: 0;
+}
+.show-artist {
+  font-family: var(--display);
+  font-size: 30px; font-weight: 700; line-height: 1.05;
+  color: var(--snow); letter-spacing: -.01em;
+  margin-bottom: 3px;
+}
+.show-meta { font-size:13px; color:var(--snow-3); }
+.show-live-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 999px;
+  background: var(--gold-soft); border: 1px solid var(--gold-line);
+  font-size: 11px; font-weight: 600; color: var(--gold);
+  letter-spacing: .06em; text-transform: uppercase;
+  margin-top: 10px;
+}
+.live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold);
+  animation: live-pulse 1.8s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(.7); }
+}
+
+/* Tab nav */
+.tab-nav {
+  flex: 0 0 auto;
+  display: flex; padding: 0 20px;
+  border-bottom: 1px solid var(--card-b);
+  overflow-x: auto; scrollbar-width: none;
+  position: relative; z-index: 1;
+}
+.tab-nav::-webkit-scrollbar { display:none; }
+.tnav {
+  padding: 13px 0; margin-right: 24px;
+  font-size: 11px; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--snow-3);
+  border: none; border-bottom: 2px solid transparent;
+  background: none; cursor: pointer; white-space: nowrap;
+  transition: color .18s, border-color .18s;
+  font-family: var(--body);
+}
+.tnav:hover  { color: var(--snow-2); }
+.tnav.active { color: var(--snow); border-bottom-color: var(--gold); }
+
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
+/* ── SETLIST TAB ── */
+.setlist-status {
+  background: var(--card); border: 1px solid var(--card-b);
+  border-radius: var(--r-md); padding: 14px 16px;
+  margin-bottom: 18px;
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.setlist-status-icon { font-size:18px; flex-shrink:0; margin-top:1px; }
+.setlist-status-text { font-size:12px; color:var(--snow-3); line-height:1.55; }
+.setlist-status-text strong { color:var(--snow-2); display:block; font-size:13px; margin-bottom:2px; }
+
+.setlist-progress {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 18px;
+}
+.progress-bar-wrap {
+  flex: 1; height: 3px; background: var(--card-b); border-radius: 999px; overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; background: var(--gold); border-radius: 999px;
+  width: 0%; transition: width .4s var(--spring);
+}
+.progress-label { font-size:11px; color:var(--snow-3); font-weight:500; white-space:nowrap; flex-shrink:0; }
+
+.song-list { display:flex; flex-direction:column; gap:4px; }
+.song-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: var(--r-sm);
+  background: var(--card); border: 1px solid var(--card-b);
+  cursor: pointer;
+  transition: background .18s, border-color .18s, transform .16s var(--spring);
+  animation: song-in .35s var(--spring) both;
+}
+@keyframes song-in { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+.song-row:hover  { background:var(--card-b); border-color:var(--card-b2); }
+.song-row:active { transform:scale(.99); }
+.song-row.played {
+  background: var(--gold-soft); border-color: var(--gold-line);
+}
+.song-row.played .song-name { color: var(--snow-2); }
+.song-row.played .song-num  { color: var(--gold); }
+
+.song-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1.5px solid var(--card-b2);
+  display: grid; place-items: center;
+  font-size: 11px; color: transparent;
+  flex-shrink: 0;
+  transition: background .2s, border-color .2s, color .2s, transform .2s var(--spring);
+}
+.song-row.played .song-check {
+  background: var(--gold); border-color: var(--gold);
+  color: var(--bg); transform: scale(1.1);
+}
+.song-num  { font-size:10px; color:var(--snow-3); font-weight:500; width:18px; flex-shrink:0; text-align:right; }
+.song-name { font-family:var(--display); font-size:16px; font-weight:400; color:var(--snow); flex:1; line-height:1.2; }
+.song-meta { font-size:10px; color:var(--snow-3); flex-shrink:0; letter-spacing:.04em; }
+
+.add-song-row {
+  display: flex; gap: 8px; margin-top: 12px; align-items: center;
+}
+.add-song-input {
+  flex: 1; padding: 11px 14px;
+  border-radius: var(--r-sm); border: 1.5px solid var(--card-b);
+  background: var(--card); font-size:14px; color:var(--snow);
+  outline:none; font-family:var(--body);
+  transition: border-color .18s;
+}
+.add-song-input::placeholder { color:var(--snow-3); }
+.add-song-input:focus { border-color:var(--gold-line); }
+.add-song-btn {
+  width:40px; height:40px; border-radius:var(--r-sm);
+  background:var(--gold-soft); border:1px solid var(--gold-line);
+  color:var(--gold); font-size:20px; display:grid; place-items:center;
+  transition:background .18s, transform .18s var(--spring);
+}
+.add-song-btn:hover  { background:var(--gold-line); transform:scale(1.06); }
+.add-song-btn:active { transform:scale(.94); }
+
+/* ── VENUE TAB ── */
+.venue-hero {
+  background: var(--bg-3); border: 1px solid var(--card-b);
+  border-radius: var(--r-lg); padding: 22px;
+  margin-bottom: 14px; position: relative; overflow: hidden;
+}
+.venue-hero::after {
+  content:''; position:absolute; right:-30px; top:-30px;
+  width:150px; height:150px; border-radius:50%;
+  background:radial-gradient(circle,var(--gold-soft) 0%,transparent 70%);
+  pointer-events:none;
+}
+.venue-eyebrow { font-size:9px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; }
+.venue-name    { font-family:var(--display); font-size:24px; font-weight:700; color:var(--snow); line-height:1.1; margin-bottom:4px; }
+.venue-address { font-size:13px; color:var(--snow-3); line-height:1.45; }
+
+.venue-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+.venue-card {
+  background: var(--card); border:1px solid var(--card-b);
+  border-radius: var(--r-md); padding:16px;
+  transition: background .18s, border-color .18s;
+}
+.venue-card:hover { background:var(--card-b); border-color:var(--card-b2); }
+.venue-card-icon  { font-size:20px; margin-bottom:8px; }
+.venue-card-title { font-size:9px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; }
+.venue-card-value { font-size:13px; color:var(--snow); line-height:1.5; }
+.venue-card-note  { font-size:11px; color:var(--snow-3); line-height:1.5; margin-top:4px; }
+.data-caveat {
+  background: var(--card); border:1px solid var(--card-b);
+  border-radius: var(--r-md); padding:14px 16px;
+  display:flex; align-items:flex-start; gap:10px;
+  margin-top: 6px;
+}
+.data-caveat-icon { font-size:16px; flex-shrink:0; opacity:.6; margin-top:1px; }
+.data-caveat-text { font-size:11px; color:var(--snow-3); line-height:1.6; }
+
+/* ── MOMENTS TAB ── */
+.moments-empty {
+  text-align:center; padding:48px 20px;
+}
+.moments-empty-icon { font-size:36px; margin-bottom:14px; opacity:.35; }
+.moments-empty-title { font-family:var(--display); font-size:20px; font-weight:500; color:var(--snow-2); margin-bottom:6px; }
+.moments-empty-sub   { font-size:13px; color:var(--snow-3); line-height:1.55; }
+
+.moment-list { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+.moment-item {
+  background: var(--card); border:1px solid var(--card-b);
+  border-radius: var(--r-md); padding:14px 16px;
+  display:flex; align-items:flex-start; gap:10px;
+  animation: song-in .3s var(--spring) both;
+}
+.moment-time  { font-size:10px; color:var(--gold); font-weight:600; letter-spacing:.06em; flex-shrink:0; padding-top:2px; }
+.moment-text  { font-size:14px; color:var(--snow); line-height:1.5; flex:1; }
+.moment-del   { font-size:14px; color:var(--snow-3); flex-shrink:0; opacity:.4; transition:opacity .18s; cursor:pointer; padding:2px; }
+.moment-del:hover { opacity:.9; color:var(--red); }
+
+.capture-bar {
+  display:flex; gap:8px; align-items:center;
+  background: var(--bg-3); border:1.5px solid var(--card-b);
+  border-radius:22px; padding:10px 12px 10px 18px;
+  transition: border-color .2s;
+}
+.capture-bar:focus-within { border-color:var(--gold-line); }
+.capture-input {
+  flex:1; border:none; background:transparent;
+  font-size:14px; color:var(--snow); outline:none;
+  font-family:var(--body); line-height:1.45;
+}
+.capture-input::placeholder { color:var(--snow-3); }
+.capture-send {
+  width:34px; height:34px; border-radius:12px;
+  background:var(--gold-soft); border:1px solid var(--gold-line);
+  color:var(--gold); display:grid; place-items:center;
+  font-size:16px; flex-shrink:0;
+  transition:background .18s, transform .18s var(--spring);
+}
+.capture-send:hover  { background:var(--gold-line); transform:scale(1.06); }
+.capture-send:active { transform:scale(.94); }
+
+.quick-moment-row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+.qm-pill {
+  padding:7px 14px; border-radius:999px;
+  border:1.5px solid var(--card-b); background:var(--card);
+  font-size:12px; font-weight:500; color:var(--snow-2);
+  transition:all .16s; font-family:var(--body);
+}
+.qm-pill:hover  { border-color:var(--gold-line); background:var(--gold-soft); color:var(--gold); }
+.qm-pill:active { transform:scale(.96); }
+
+/* ── DIM OVERLAY ── */
+#dimBtn {
+  position: fixed; inset:0; z-index:500;
+  background: transparent;
+  opacity: 0; pointer-events:none;
+  transition: opacity .3s;
+  cursor: pointer;
+}
+body.dimmed #dimBtn { opacity:1; pointer-events:all; }
+
+/* ── TOAST ── */
+.toast {
+  position:fixed; bottom:28px; left:50%;
+  transform:translateX(-50%) translateY(14px);
+  background:var(--bg-3); color:var(--snow);
+  border:1px solid var(--card-b2);
+  font-size:13px; font-weight:500; padding:11px 20px;
+  border-radius:999px; box-shadow:0 8px 28px rgba(0,0,0,.4);
+  z-index:600; white-space:nowrap; opacity:0;
+  transition:opacity .28s var(--spring), transform .28s var(--spring);
+  pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (max-width:400px) {
+  .setup-headline { font-size:30px; }
+  .venue-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-orb bg-orb-1" id="orb1"></div>
+<div class="bg-orb bg-orb-2" id="orb2"></div>
+
+<div id="app">
+
+<!-- ══════════════════════════════════════
+     SCREEN 0 — SETUP
+══════════════════════════════════════ -->
+<div id="s0" class="screen active">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <span class="topbar-logo-word">Concerto</span>
+      <span class="topbar-logo-sub">Concert Mode</span>
+    </div>
+  </div>
+  <div class="scroll-area">
+    <div class="setup-eyebrow">You're here. Let's go.</div>
+    <h1 class="setup-headline">What show are<br>you at <em>tonight?</em></h1>
+    <p class="setup-sub">Enter the artist and venue to load your companion. Setlist data where we have it — honest about where we don't.</p>
+
+    <div class="field-label">Artist</div>
+    <input class="dark-input" id="artistInput" type="text" placeholder="e.g. Hozier" autocomplete="off" autocorrect="off" spellcheck="false"/>
+
+    <div class="field-label">Venue</div>
+    <input class="dark-input" id="venueInput" type="text" placeholder="e.g. Madison Square Garden, New York" autocomplete="off" autocorrect="off" spellcheck="false"/>
+
+    <button class="primary-btn" id="enterBtn" disabled>Enter Concert Mode →</button>
+
+    <div class="divider"></div>
+
+    <div class="recent-label">Recent shows</div>
+    <div id="recentList"></div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN 1 — CONCERT MODE
+══════════════════════════════════════ -->
+<div id="s1" class="screen">
+
+  <!-- Header -->
+  <div class="topbar" style="border-bottom:1px solid var(--card-b)">
+    <button id="backBtn" style="font-size:13px;font-weight:600;color:var(--snow-3);display:flex;align-items:center;gap:6px;transition:color .18s" onmouseover="this.style.color='var(--snow)'" onmouseout="this.style.color='var(--snow-3)'">
+      ← Back
+    </button>
+    <div class="topbar-right">
+      <button class="icon-btn" id="dimToggle" title="Dim screen">☽</button>
+      <button class="icon-btn" id="shareBtn" title="Share setlist">↑</button>
+    </div>
+  </div>
+
+  <div class="show-header">
+    <div class="show-artist" id="showArtist">—</div>
+    <div class="show-meta" id="showMeta">—</div>
+    <div class="show-live-pill"><div class="live-dot"></div> Concert Mode Active</div>
+  </div>
+
+  <!-- Tab nav -->
+  <div class="tab-nav">
+    <button class="tnav active" data-tab="setlist">Setlist</button>
+    <button class="tnav" data-tab="venue">Venue</button>
+    <button class="tnav" data-tab="moments">Moments</button>
+  </div>
+
+  <!-- Scrollable content -->
+  <div class="scroll-area" style="padding-top:18px">
+
+    <!-- ── SETLIST ── -->
+    <div class="tab-panel active" id="tab-setlist">
+      <div class="setlist-status" id="setlistStatus">
+        <div class="setlist-status-icon">📋</div>
+        <div class="setlist-status-text">
+          <strong id="setlistStatusTitle">Loading setlist…</strong>
+          <span id="setlistStatusSub">Checking known setlists for this artist</span>
+        </div>
+      </div>
+
+      <div class="setlist-progress" id="progressWrap" style="display:none">
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+        <div class="progress-label" id="progressLabel">0 played</div>
+      </div>
+
+      <div class="song-list" id="songList"></div>
+
+      <div class="add-song-row" style="margin-top:16px">
+        <input class="add-song-input" id="addSongInput" type="text" placeholder="Add a song…" autocomplete="off"/>
+        <button class="add-song-btn" id="addSongBtn">+</button>
+      </div>
+    </div>
+
+    <!-- ── VENUE ── -->
+    <div class="tab-panel" id="tab-venue">
+      <div class="venue-hero">
+        <div class="venue-eyebrow">Tonight's Venue</div>
+        <div class="venue-name" id="venueDisplayName">—</div>
+        <div class="venue-address" id="venueDisplayAddress">—</div>
+      </div>
+
+      <div class="venue-grid" id="venueGrid"></div>
+
+      <div class="data-caveat">
+        <div class="data-caveat-icon">ℹ</div>
+        <div class="data-caveat-text">Venue data is sourced from publicly available information and may not reflect real-time updates. Always confirm bag policy and re-entry rules at the gate.</div>
+      </div>
+    </div>
+
+    <!-- ── MOMENTS ── -->
+    <div class="tab-panel" id="tab-moments">
+      <div class="quick-moment-row">
+        <button class="qm-pill" data-moment="🔥 This song.">🔥 This song</button>
+        <button class="qm-pill" data-moment="✨ Best moment so far.">✨ Best moment</button>
+        <button class="qm-pill" data-moment="🎸 Incredible performance.">🎸 Incredible</button>
+        <button class="qm-pill" data-moment="😭 Did not expect that one.">😭 Unexpected</button>
+        <button class="qm-pill" data-moment="📸 Wish I could freeze this.">📸 Freeze this</button>
+        <button class="qm-pill" data-moment="🏟 The whole crowd just lost it.">🏟 Crowd lost it</button>
+      </div>
+
+      <div class="moment-list" id="momentList"></div>
+
+      <div id="momentsEmpty" class="moments-empty">
+        <div class="moments-empty-icon">✦</div>
+        <div class="moments-empty-title">Capture the night</div>
+        <div class="moments-empty-sub">Tap a quick moment above or write your own. Timestamped automatically.</div>
+      </div>
+
+      <div class="capture-bar">
+        <input class="capture-input" id="captureInput" type="text" placeholder="Something worth remembering…" maxlength="200"/>
+        <button class="capture-send" id="captureSend">↑</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- end #app -->
+
+<!-- Dim tap-to-undim overlay -->
+<button id="dimBtn" onclick="toggleDim()"></button>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+const S = {
+  artist: '',
+  venue: '',
+  songs: [],       // {name, played, custom}
+  moments: [],     // {text, time, ts}
+  playedCount: 0,
+  history: [],     // [{artist, venue, ts}]
+};
+
+// ── SAMPLE SETLISTS ──
+// Real-feeling known setlists for demo. Honest about gaps.
+const KNOWN_SETLISTS = {
+  'hozier': {
+    confirmed: true,
+    note: 'Based on recent Unreal Unearth tour setlists. Order may vary.',
+    songs: ['De Selby (Part 1)','De Selby (Part 2)','Eat Your Young','To Be Alone','From Eden','Movement','Cherry Wine','Almost (Sweet Music)','Work Song','Wasteland, Baby!','Take Me to Church','Francesca','Damage Gets Done','First Light','Shrike','Nina Cried Power','No Plan','Abstract (Psychopomp)','Too Sweet','Like Real People Do']
+  },
+  'olivia rodrigo': {
+    confirmed: true,
+    note: 'Based on GUTS World Tour setlists. Varies by night.',
+    songs: ['vampire','bad idea right?','brutal','traitor','drivers license','deja vu','good 4 u','favorite crime','enough for you','1 step forward, 3 steps back','happier','All I Want','lacy','making the bed','logical','get him back!','the grudge','pretty isn\'t pretty','teenage dream','hope ur ok']
+  },
+  'sabrina carpenter': {
+    confirmed: true,
+    note: 'Based on Short n\' Sweet Tour. Changes nightly.',
+    songs: ['Taste','Espresso','Please Please Please','Feather','Bad For Business','Tornado Warnings','Coincidence','Nonsense','Skinny Dipping','Fast Times','Looking at Me Now','because i liked a boy','Read Your Mind','Sue Me','Dumb & Poetic','Juno','On Christmas','Mean Girls']
+  },
+  'chappell roan': {
+    confirmed: true,
+    note: 'Based on 2024–25 touring setlists.',
+    songs: ['Naked in Manhattan','Red Wine Supernova','HOT TO GO!','California','Super Graphic Ultra Modern Girl','My Kink Is Karma','Casual','Pink Pony Club','After Midnight','Good Luck, Babe!','Coffee','Femininomenon','念 (Nian)','Picture You','Die Young','Guilty Pleasure','Subway']
+  },
+  'noah kahan': {
+    confirmed: true,
+    note: 'Based on Stick Season World Tour setlists.',
+    songs: ['Stick Season','Maine','Homesick','All My Love','False Confidence','Mess','She Calls Me Back','Orange Juice','Dial Drunk','Paul Revere','Everywhere, Everything','Northern Attitude','Godlight','Growing Sideways','Young Blood','Come Over','Beer','Strawberry Wine']
+  },
+  'tyler, the creator': {
+    confirmed: true,
+    note: 'Based on Chromakopia Tour. Highly curated, varies.',
+    songs: ['St. CHROMA','DARLING, I','NOID','SORRY NOT SORRY','THOUGHT I WAS DEAD','I KILLED YOU','LIKE HIM','TAKE YOUR MASK OFF','CHROMAKOPIA','BALLOON','I SEE YOU','RUN','NEW MAGIC WAND','EARFQUAKE','SEE YOU AGAIN','WHO DAT BOY','IGOR\'S THEME','ARE WE STILL FRIENDS?']
+  },
+  'billie eilish': {
+    confirmed: true,
+    note: 'Based on HIT ME HARD AND SOFT: THE TOUR.',
+    songs: ['SKINNY','LUNCH','CHIHIRO','BIRDS OF A FEATHER','WILDFLOWER','THE GREATEST','L\'AMOUR DE MA VIE','THE DINER','BITTERSUITE','BLUE','bad guy','Therefore I Am','Happier Than Ever','NDA','TV','What Was I Made For?','ocean eyes','idontwannabeyouanymore','when the party\'s over']
+  },
+  'the national': {
+    confirmed: true,
+    note: 'Based on recent First Two Pages of Frankenstein tour.',
+    songs: ['Once Upon a Poolside','Eucalyptus','New Order T-Shirt','Grease in Your Hair','This Isn\'t Helping','Tropic Morning News','Alien','Send for Me','Pink Rabbits','Bloodbuzz Ohio','Mr. November','Graceless','Sorrow','Afraid of Everyone','Available','Lemonworld','England','Vanderlyle Crybaby Geeks']
+  },
+};
+
+const VENUE_DATA = {
+  'madison square garden': { address:'4 Pennsylvania Plaza, New York, NY 10001', bags:'Clear bag policy. 14"×14"×6" max.', parking:'No on-site parking. Penn Station 1 min walk. Subway A/C/E/1/2/3.', concessions:'200+ food options. Cashless only.', reentry:'No re-entry.' },
+  'msg': { address:'4 Pennsylvania Plaza, New York, NY 10001', bags:'Clear bag policy. 14"×14"×6" max.', parking:'No on-site parking. Penn Station 1 min walk. Subway A/C/E/1/2/3.', concessions:'200+ food options. Cashless only.', reentry:'No re-entry.' },
+  'united center': { address:'1901 W Madison St, Chicago, IL 60612', bags:'Clear bag policy. 12"×6"×12" max.', parking:'United Center lots $30–40. Rideshare recommended.', concessions:'Full concourse. Portillo\'s, Pequod\'s Pizza on-site.', reentry:'No re-entry.' },
+  'kia forum': { address:'3900 W Manchester Blvd, Inglewood, CA 90305', bags:'Clear bag policy. 12"×12"×6" max.', parking:'On-site $45–60. Rideshare pickup zone east side.', concessions:'Multiple levels. Cashless preferred.', reentry:'No re-entry.' },
+  'the forum': { address:'3900 W Manchester Blvd, Inglewood, CA 90305', bags:'Clear bag policy. 12"×12"×6" max.', parking:'On-site $45–60. Rideshare pickup zone east side.', concessions:'Multiple levels. Cashless preferred.', reentry:'No re-entry.' },
+  'crypto.com arena': { address:'1111 S Figueroa St, Los Angeles, CA 90015', bags:'Clear bag required. 12"×6"×12" max.', parking:'Pico Station Metro E/L lines. Parking $40+.', concessions:'4 concourse levels. Multiple bars.', reentry:'No re-entry.' },
+  'barclays center': { address:'620 Atlantic Ave, Brooklyn, NY 11217', bags:'Clear bag policy. 12"×6"×12" max.', parking:'Atlantic Terminal garage. B/D/N/Q/R/2/3/4/5 trains.', concessions:'Full concourse. Local Brooklyn vendors.', reentry:'No re-entry.' },
+  'chase center': { address:'1 Warriors Way, San Francisco, CA 94158', bags:'Clear bag policy. No large bags.', parking:'Adjacent garage. Mission Bay ferry terminal nearby.', concessions:'Premium food options. Cashless only.', reentry:'No re-entry.' },
+  'td garden': { address:'100 Legends Way, Boston, MA 02114', bags:'Clear bag policy. 12"×6"×12" max.', parking:'North Station attached. Orange/Green Line direct.', concessions:'Full arena concessions. Boston cream pie somewhere.', reentry:'No re-entry.' },
+  'climate pledge arena': { address:'334 1st Ave N, Seattle, WA 98109', bags:'Clear bag required.', parking:'Seattle Center garages. Monorail from downtown.', concessions:'Pacific Northwest focus. Sustainable vendors.', reentry:'No re-entry.' },
+  'scotiabank arena': { address:'40 Bay St, Toronto, ON M5J 2X2', bags:'Clear bag policy. 12"×12"×6" max.', parking:'Union Station directly connected. GO Train/TTC.', concessions:'Full concourse, Tim Hortons obviously.', reentry:'No re-entry.' },
+  'american airlines center': { address:'2500 Victory Ave, Dallas, TX 75219', bags:'Clear bag required. 12"×6"×12" max.', parking:'Victory Park garage $20–40. Uber drop-off Victory Ave.', concessions:'Texas BBQ and sports bar food throughout.', reentry:'No re-entry.' },
+  'ball arena': { address:'1000 Chopper Cir, Denver, CO 80204', bags:'Clear bag policy.', parking:'Auraria Pkwy lots. Light rail C/E/W lines.', concessions:'Colorado craft beer focus. Full food options.', reentry:'No re-entry.' },
+  'wells fargo center': { address:'3601 S Broad St, Philadelphia, PA 19148', bags:'Clear bag required.', parking:'Xfinity Live! lot adjacent. SEPTA Broad St Line.', concessions:'Philly cheesesteak available (obviously).', reentry:'No re-entry.' },
+};
+
+// ── UTILS ──
+const $  = id => document.getElementById(id);
+let _tt;
+function showToast(msg, ms=2400) {
+  const el=$('toast'); el.textContent=msg; el.classList.add('show');
+  clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),ms);
+}
+function now() {
+  return new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+function saveHistory() {
+  try { localStorage.setItem('cm_history', JSON.stringify(S.history)); } catch{}
+}
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem('cm_history')||'[]'); } catch { return []; }
+}
+function saveMoments(artist) {
+  try { localStorage.setItem(`cm_moments_${artist.toLowerCase()}`, JSON.stringify(S.moments)); } catch{}
+}
+function loadMoments(artist) {
+  try { return JSON.parse(localStorage.getItem(`cm_moments_${artist.toLowerCase()}`)||'[]'); } catch { return []; }
+}
+
+// ── SCREENS ──
+const SCREENS = [$('s0'),$('s1')];
+function goTo(idx) {
+  SCREENS.forEach((s,i) => {
+    s.classList.remove('active','exit');
+    if (i===idx) s.classList.add('active');
+    else if (i<idx) s.classList.add('exit');
+  });
+}
+
+// ── SETUP ──
+function updateEnterBtn() {
+  $('enterBtn').disabled = !($('artistInput').value.trim() && $('venueInput').value.trim());
+}
+$('artistInput').addEventListener('input', updateEnterBtn);
+$('venueInput').addEventListener('input', updateEnterBtn);
+$('artistInput').addEventListener('keydown', e => { if(e.key==='Enter') $('venueInput').focus(); });
+$('venueInput').addEventListener('keydown', e => { if(e.key==='Enter' && !$('enterBtn').disabled) enterConcertMode(); });
+$('enterBtn').addEventListener('click', enterConcertMode);
+
+function renderRecent() {
+  S.history = loadHistory();
+  const list = $('recentList');
+  if (!S.history.length) { list.innerHTML = '<div style="font-size:12px;color:var(--snow-3);text-align:center;padding:12px 0">No recent shows yet</div>'; return; }
+  list.innerHTML = S.history.slice(0,4).map((h,i) => `
+    <div class="recent-card" onclick="loadRecent(${i})">
+      <div class="recent-card-dot">🎤</div>
+      <div class="recent-card-info">
+        <div class="recent-card-artist">${h.artist}</div>
+        <div class="recent-card-meta">${h.venue}</div>
+      </div>
+      <div class="recent-card-arrow">→</div>
+    </div>`).join('');
+}
+
+function loadRecent(i) {
+  const h = S.history[i];
+  $('artistInput').value = h.artist;
+  $('venueInput').value  = h.venue;
+  updateEnterBtn();
+  enterConcertMode();
+}
+
+function enterConcertMode() {
+  S.artist = $('artistInput').value.trim();
+  S.venue  = $('venueInput').value.trim();
+  if (!S.artist || !S.venue) return;
+
+  // Save to history
+  S.history = loadHistory().filter(h => h.artist.toLowerCase()!==S.artist.toLowerCase());
+  S.history.unshift({artist:S.artist, venue:S.venue, ts:Date.now()});
+  if (S.history.length>8) S.history=S.history.slice(0,8);
+  saveHistory();
+
+  // Set header
+  $('showArtist').textContent = S.artist;
+  $('showMeta').textContent   = S.venue;
+
+  // Load venue
+  loadVenueData();
+
+  // Load setlist
+  loadSetlist();
+
+  // Load moments
+  S.moments = loadMoments(S.artist);
+  renderMoments();
+
+  // Activate background orbs
+  $('orb1').classList.add('visible');
+  $('orb2').classList.add('visible');
+
+  // Reset to setlist tab
+  switchTab('setlist');
+
+  goTo(1);
+}
+
+// ── SETLIST ──
+function loadSetlist() {
+  const key = S.artist.toLowerCase();
+  const known = KNOWN_SETLISTS[key];
+  S.songs = [];
+  S.playedCount = 0;
+
+  if (known) {
+    $('setlistStatusTitle').textContent = 'Setlist loaded';
+    $('setlistStatusSub').textContent   = known.note;
+    S.songs = known.songs.map(name => ({name, played:false, custom:false}));
+    $('progressWrap').style.display = 'flex';
+  } else {
+    $('setlistStatusTitle').textContent = 'Setlist not confirmed';
+    $('setlistStatusSub').textContent   = `We don't have a known setlist for ${S.artist} yet. Add songs as they're played using the field below.`;
+    $('progressWrap').style.display = 'none';
+  }
+
+  renderSongs();
+  updateProgress();
+}
+
+function renderSongs() {
+  const list = $('songList');
+  if (!S.songs.length) { list.innerHTML = ''; return; }
+  list.innerHTML = S.songs.map((s,i) => `
+    <div class="song-row ${s.played?'played':''}" data-i="${i}" style="animation-delay:${Math.min(i*.025,.5)}s">
+      <div class="song-check">${s.played?'✓':''}</div>
+      <div class="song-num">${i+1}</div>
+      <div class="song-name">${s.name}</div>
+      ${s.custom ? '<div class="song-meta">+ added</div>' : ''}
+    </div>`).join('');
+  list.querySelectorAll('.song-row').forEach(row => {
+    row.addEventListener('click', () => toggleSong(parseInt(row.dataset.i)));
+  });
+}
+
+function toggleSong(i) {
+  S.songs[i].played = !S.songs[i].played;
+  S.playedCount = S.songs.filter(s=>s.played).length;
+  renderSongs();
+  updateProgress();
+  if (S.songs[i].played) {
+    // Auto-log moment for played song
+    const pct = Math.round((S.playedCount/S.songs.length)*100);
+    if (pct===50) showToast('Halfway through the setlist ✦');
+    if (pct===100) showToast('That\'s the whole setlist 🎉');
+  }
+}
+
+function updateProgress() {
+  const total = S.songs.length;
+  if (!total) return;
+  const pct = Math.round((S.playedCount/total)*100);
+  $('progressBar').style.width = pct+'%';
+  $('progressLabel').textContent = `${S.playedCount} of ${total}`;
+}
+
+// Add song
+$('addSongBtn').addEventListener('click', addSong);
+$('addSongInput').addEventListener('keydown', e => { if(e.key==='Enter') addSong(); });
+function addSong() {
+  const val = $('addSongInput').value.trim(); if (!val) return;
+  S.songs.push({name:val, played:false, custom:true});
+  $('addSongInput').value = '';
+  $('progressWrap').style.display = 'flex';
+  renderSongs();
+  updateProgress();
+  showToast(`"${val}" added`);
+}
+
+// ── VENUE ──
+function loadVenueData() {
+  $('venueDisplayName').textContent = S.venue;
+
+  const key = S.venue.toLowerCase();
+  let data = null;
+  for (const [k,v] of Object.entries(VENUE_DATA)) {
+    if (key.includes(k)) { data=v; break; }
+  }
+
+  $('venueDisplayAddress').textContent = data ? data.address : 'Address not on file — check venue website';
+
+  const cards = data ? [
+    {icon:'👜', title:'Bag Policy',   value:data.bags},
+    {icon:'🚗', title:'Parking',      value:data.parking},
+    {icon:'🍔', title:'Concessions',  value:data.concessions},
+    {icon:'🔄', title:'Re-Entry',     value:data.reentry},
+  ] : [
+    {icon:'👜', title:'Bag Policy',   value:'Not on file', note:'Check venue website or signage at entry'},
+    {icon:'🚗', title:'Parking',      value:'Not on file', note:'Check Google Maps or venue app'},
+    {icon:'🍔', title:'Concessions',  value:'Not on file', note:'Explore the concourse — you\'ll find them'},
+    {icon:'🔄', title:'Re-Entry',     value:'Not on file', note:'Ask staff at the gate'},
+  ];
+
+  $('venueGrid').innerHTML = cards.map(c => `
+    <div class="venue-card">
+      <div class="venue-card-icon">${c.icon}</div>
+      <div class="venue-card-title">${c.title}</div>
+      <div class="venue-card-value">${c.value}</div>
+      ${c.note ? `<div class="venue-card-note">${c.note}</div>` : ''}
+    </div>`).join('');
+}
+
+// ── MOMENTS ──
+function renderMoments() {
+  const list     = $('momentList');
+  const empty    = $('momentsEmpty');
+  if (!S.moments.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = S.moments.map((m,i) => `
+    <div class="moment-item">
+      <div class="moment-time">${m.time}</div>
+      <div class="moment-text">${m.text}</div>
+      <div class="moment-del" onclick="deleteMoment(${i})">✕</div>
+    </div>`).join('');
+}
+
+function addMoment(text) {
+  S.moments.unshift({text, time:now(), ts:Date.now()});
+  saveMoments(S.artist);
+  renderMoments();
+}
+
+function deleteMoment(i) {
+  S.moments.splice(i,1);
+  saveMoments(S.artist);
+  renderMoments();
+}
+
+// Quick moments
+document.querySelectorAll('.qm-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    addMoment(pill.dataset.moment);
+    showToast('Moment captured ✦');
+  });
+});
+
+// Capture bar
+$('captureSend').addEventListener('click', sendCapture);
+$('captureInput').addEventListener('keydown', e => { if(e.key==='Enter') sendCapture(); });
+function sendCapture() {
+  const val = $('captureInput').value.trim(); if(!val) return;
+  addMoment(val);
+  $('captureInput').value = '';
+  showToast('Moment captured ✦');
+}
+
+// ── TABS ──
+function switchTab(name) {
+  document.querySelectorAll('.tnav').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tnav[data-tab="${name}"]`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+document.querySelectorAll('.tnav').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
+
+// ── DIM ──
+function toggleDim() {
+  document.body.classList.toggle('dimmed');
+  $('dimToggle').classList.toggle('active');
+}
+$('dimToggle').addEventListener('click', toggleDim);
+
+// ── BACK ──
+$('backBtn').addEventListener('click', () => {
+  if (document.body.classList.contains('dimmed')) toggleDim();
+  $('orb1').classList.remove('visible');
+  $('orb2').classList.remove('visible');
+  goTo(0);
+  renderRecent();
+});
+
+// ── SHARE ──
+$('shareBtn').addEventListener('click', async () => {
+  const played = S.songs.filter(s=>s.played).map(s=>`✓ ${s.name}`);
+  const unplayed = S.songs.filter(s=>!s.played).map(s=>`  ${s.name}`);
+  const text = `${S.artist} at ${S.venue}\nSetlist via Concerto Concert Mode\n\n${[...played,...unplayed].join('\n')}`;
+  try {
+    if (navigator.share) await navigator.share({title:`${S.artist} Setlist`, text});
+    else { await navigator.clipboard.writeText(text); showToast('Setlist copied to clipboard'); }
+  } catch { showToast('Share canceled'); }
+});
+
+// ── INIT ──
+renderRecent();
+</script>
+</body>
+</html>
