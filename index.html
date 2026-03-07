@@ -19,9 +19,9 @@
   --snow-3:    rgba(248,249,249,.28);
   --snow-4:    rgba(248,249,249,.10);
   --snow-5:    rgba(248,249,249,.05);
-  --gold:      #C9A96E;
-  --gold-soft: rgba(201,169,110,.12);
-  --gold-line: rgba(201,169,110,.28);
+  --gold:      rgba(248,249,249,.9);
+  --gold-soft: rgba(248,249,249,.08);
+  --gold-line: rgba(248,249,249,.18);
   --card:      rgba(255,255,255,.05);
   --card-b:    rgba(248,249,249,.08);
   --card-b2:   rgba(248,249,249,.14);
@@ -69,7 +69,7 @@ a { color:inherit; text-decoration:none; }
   transition: opacity 1.5s ease;
 }
 .bg-orb.visible { opacity: 1; }
-.bg-orb-1 { width: 400px; height: 400px; top: -100px; right: -100px; background: radial-gradient(circle, rgba(201,169,110,.08) 0%, transparent 70%); animation: orb-drift-1 12s ease-in-out infinite; }
+.bg-orb-1 { width: 400px; height: 400px; top: -100px; right: -100px; background: radial-gradient(circle, rgba(248,249,249,.04) 0%, transparent 70%); animation: orb-drift-1 12s ease-in-out infinite; }
 .bg-orb-2 { width: 300px; height: 300px; bottom: 0; left: -80px; background: radial-gradient(circle, rgba(14,26,43,.4) 0%, transparent 70%); animation: orb-drift-2 15s ease-in-out infinite; }
 @keyframes orb-drift-1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-20px,20px)} }
 @keyframes orb-drift-2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(15px,-15px)} }
@@ -231,7 +231,7 @@ a { color:inherit; text-decoration:none; }
 }
 .live-dot {
   width: 6px; height: 6px; border-radius: 50%;
-  background: var(--gold);
+  background: var(--snow-2);
   animation: live-pulse 1.8s ease-in-out infinite;
 }
 @keyframes live-pulse {
@@ -282,7 +282,7 @@ a { color:inherit; text-decoration:none; }
   flex: 1; height: 3px; background: var(--card-b); border-radius: 999px; overflow: hidden;
 }
 .progress-bar-fill {
-  height: 100%; background: var(--gold); border-radius: 999px;
+  height: 100%; background: var(--snow-2); border-radius: 999px;
   width: 0%; transition: width .4s var(--spring);
 }
 .progress-label { font-size:11px; color:var(--snow-3); font-weight:500; white-space:nowrap; flex-shrink:0; }
@@ -314,7 +314,7 @@ a { color:inherit; text-decoration:none; }
   transition: background .2s, border-color .2s, color .2s, transform .2s var(--spring);
 }
 .song-row.played .song-check {
-  background: var(--gold); border-color: var(--gold);
+  background: var(--snow-2); border-color: var(--snow-2);
   color: var(--bg); transform: scale(1.1);
 }
 .song-num  { font-size:10px; color:var(--snow-3); font-weight:500; width:18px; flex-shrink:0; text-align:right; }
@@ -351,7 +351,7 @@ a { color:inherit; text-decoration:none; }
 .venue-hero::after {
   content:''; position:absolute; right:-30px; top:-30px;
   width:150px; height:150px; border-radius:50%;
-  background:radial-gradient(circle,var(--gold-soft) 0%,transparent 70%);
+  background:radial-gradient(circle,rgba(248,249,249,.04) 0%,transparent 70%);
   pointer-events:none;
 }
 .venue-eyebrow { font-size:9px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); margin-bottom:6px; }
@@ -455,10 +455,109 @@ body.dimmed #dimBtn { opacity:1; pointer-events:all; }
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
+/* ── SETLIST PASTE MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 800;
+  background: rgba(8,13,22,.85);
+  backdrop-filter: blur(12px);
+  display: flex; align-items: flex-end;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s var(--spring);
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal-sheet {
+  width: 100%; background: var(--bg-3);
+  border-top: 1px solid var(--card-b2);
+  border-radius: 28px 28px 0 0;
+  padding: 24px 20px 40px;
+  transform: translateY(100%);
+  transition: transform .38s var(--spring);
+  max-height: 90dvh;
+  display: flex; flex-direction: column;
+}
+.modal-overlay.open .modal-sheet { transform: translateY(0); }
+.modal-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--card-b2); margin: 0 auto 20px;
+}
+.modal-title {
+  font-family: var(--display); font-size: 22px; font-weight: 700;
+  color: var(--snow); margin-bottom: 6px;
+}
+.modal-sub { font-size: 13px; color: var(--snow-3); line-height: 1.5; margin-bottom: 18px; }
+.paste-textarea {
+  width: 100%; flex: 1; min-height: 160px; max-height: 260px;
+  padding: 14px 16px; border-radius: var(--r-md);
+  border: 1.5px solid var(--card-b);
+  background: var(--card); color: var(--snow);
+  font-size: 14px; font-family: var(--body);
+  line-height: 1.6; outline: none; resize: none;
+  transition: border-color .2s;
+  margin-bottom: 12px;
+}
+.paste-textarea::placeholder { color: var(--snow-3); }
+.paste-textarea:focus { border-color: var(--gold-line); }
+.modal-actions { display: flex; gap: 8px; }
+.modal-btn {
+  flex: 1; padding: 14px;
+  border-radius: var(--r-md); font-size: 14px; font-weight: 600;
+  font-family: var(--body); transition: all .18s var(--spring);
+}
+.modal-btn.primary { background: var(--snow); color: var(--ink); }
+.modal-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(248,249,249,.12); }
+.modal-btn.ghost { background: var(--card); border: 1px solid var(--card-b); color: var(--snow-2); }
+.modal-btn.ghost:hover { background: var(--card-b); }
+
+/* ── POST-SHOW SCREEN ── */
+.postshow-hero {
+  text-align: center; padding: 32px 20px 24px;
+  border-bottom: 1px solid var(--card-b);
+}
+.postshow-icon { font-size: 48px; margin-bottom: 16px; }
+.postshow-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+.postshow-title { font-family: var(--display); font-size: 30px; font-weight: 700; color: var(--snow); line-height: 1.1; margin-bottom: 6px; }
+.postshow-sub { font-size: 14px; color: var(--snow-3); line-height: 1.55; }
+
+.postshow-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px; margin-bottom: 20px;
+}
+.postshow-stat {
+  background: var(--card); border: 1px solid var(--card-b);
+  border-radius: var(--r-md); padding: 16px 12px; text-align: center;
+}
+.postshow-stat-num { font-family: var(--display); font-size: 28px; font-weight: 700; color: var(--snow); line-height: 1; }
+.postshow-stat-label { font-size: 10px; color: var(--snow-3); font-weight: 500; letter-spacing: .1em; text-transform: uppercase; margin-top: 4px; }
+
+.postshow-moments-recap { margin-bottom: 20px; }
+.postshow-section-label { font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--snow-3); margin-bottom: 10px; }
+.postshow-moment-item {
+  background: var(--card); border: 1px solid var(--card-b);
+  border-radius: var(--r-md); padding: 12px 14px;
+  margin-bottom: 6px; display: flex; gap: 10px; align-items: flex-start;
+}
+.postshow-moment-time { font-size: 10px; color: var(--gold); font-weight: 600; letter-spacing: .06em; flex-shrink: 0; padding-top: 2px; }
+.postshow-moment-text { font-size: 13px; color: var(--snow-2); line-height: 1.45; }
+
+.postshow-actions { display: flex; flex-direction: column; gap: 8px; }
+.postshow-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 15px; border-radius: var(--r-md);
+  font-size: 14px; font-weight: 600; font-family: var(--body);
+  transition: all .2s var(--spring);
+}
+.postshow-btn.primary { background: var(--snow); color: var(--ink); box-shadow: 0 8px 28px rgba(248,249,249,.1); }
+.postshow-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 12px 36px rgba(248,249,249,.15); }
+.postshow-btn.ghost { background: var(--card); border: 1px solid var(--card-b); color: var(--snow-2); }
+.postshow-btn.ghost:hover { background: var(--card-b); border-color: var(--card-b2); }
+.postshow-btn.gold-btn { background: var(--gold-soft); border: 1.5px solid var(--gold-line); color: var(--gold); }
+.postshow-btn.gold-btn:hover { background: rgba(201,169,110,.2); }
+
 /* ── RESPONSIVE ── */
 @media (max-width:400px) {
   .setup-headline { font-size:30px; }
   .venue-grid { grid-template-columns:1fr; }
+  .postshow-stats { grid-template-columns: 1fr 1fr; }
 }
 </style>
 </head>
@@ -511,6 +610,8 @@ body.dimmed #dimBtn { opacity:1; pointer-events:all; }
       ← Back
     </button>
     <div class="topbar-right">
+      <button class="icon-btn" id="pasteSetlistBtn" title="Paste setlist">✎</button>
+      <button class="icon-btn" id="endShowBtn" title="End show">■</button>
       <button class="icon-btn" id="dimToggle" title="Dim screen">☽</button>
       <button class="icon-btn" id="shareBtn" title="Share setlist">↑</button>
     </div>
@@ -596,6 +697,63 @@ body.dimmed #dimBtn { opacity:1; pointer-events:all; }
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN 2 — POST-SHOW
+══════════════════════════════════════ -->
+<div id="s2" class="screen">
+  <div class="topbar" style="border-bottom:1px solid var(--card-b)">
+    <div class="topbar-logo">
+      <span class="topbar-logo-word">Concerto</span>
+      <span class="topbar-logo-sub">Show Recap</span>
+    </div>
+  </div>
+  <div class="scroll-area" style="padding-top:0">
+    <div class="postshow-hero">
+      <div class="postshow-icon">✦</div>
+      <div class="postshow-eyebrow">Show's over</div>
+      <div class="postshow-title" id="psArtist">—</div>
+      <div class="postshow-sub" id="psVenue">—</div>
+    </div>
+
+    <div style="padding:20px 0 0">
+      <div class="postshow-stats" id="psStats"></div>
+
+      <div class="postshow-moments-recap" id="psMomentsWrap" style="display:none">
+        <div class="postshow-section-label">Your moments</div>
+        <div id="psMomentsList"></div>
+      </div>
+
+      <div class="postshow-section-label">Played tonight</div>
+      <div id="psSetlist" style="margin-bottom:20px"></div>
+
+      <div class="postshow-actions">
+        <a class="postshow-btn gold-btn" id="psSetlistFm" href="#" target="_blank" rel="noopener">
+          Log on Setlist.fm →
+        </a>
+        <button class="postshow-btn primary" id="psConcertoPlus">
+          Build next night with Concerto+ ✦
+        </button>
+        <button class="postshow-btn ghost" id="psShare">Share recap ↑</button>
+        <button class="postshow-btn ghost" id="psNewShow" style="margin-top:4px">New show →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PASTE SETLIST MODAL ── -->
+<div class="modal-overlay" id="pasteModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Paste your setlist</div>
+    <div class="modal-sub">Copy from Setlist.fm, Google, or anywhere. One song per line — we'll handle the rest.</div>
+    <textarea class="paste-textarea" id="pasteTextarea" placeholder="Mr. Brightside&#10;Human&#10;Somebody Told Me&#10;All These Things That I've Done&#10;…"></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="pasteCancelBtn">Cancel</button>
+      <button class="modal-btn primary" id="pasteConfirmBtn">Load setlist →</button>
+    </div>
   </div>
 </div>
 
@@ -703,7 +861,7 @@ function loadMoments(artist) {
 }
 
 // ── SCREENS ──
-const SCREENS = [$('s0'),$('s1')];
+const SCREENS = [$('s0'),$('s1'),$('s2')];
 function goTo(idx) {
   SCREENS.forEach((s,i) => {
     s.classList.remove('active','exit');
@@ -970,8 +1128,135 @@ $('shareBtn').addEventListener('click', async () => {
   } catch { showToast('Share canceled'); }
 });
 
+// ── PASTE SETLIST MODAL ──
+$('pasteSetlistBtn').addEventListener('click', () => {
+  $('pasteTextarea').value = '';
+  $('pasteModal').classList.add('open');
+  setTimeout(() => $('pasteTextarea').focus(), 400);
+});
+$('pasteCancelBtn').addEventListener('click', () => $('pasteModal').classList.remove('open'));
+$('pasteModal').addEventListener('click', e => { if(e.target===$('pasteModal')) $('pasteModal').classList.remove('open'); });
+
+$('pasteConfirmBtn').addEventListener('click', () => {
+  const raw = $('pasteTextarea').value.trim();
+  if (!raw) return;
+  const songs = raw.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0)
+    // strip common setlist.fm prefixes like "1.", "1)", numbers, bullets
+    .map(l => l.replace(/^[\d]+[\.\)]\s*/,'').replace(/^[-•*]\s*/,'').trim())
+    .filter(l => l.length > 0);
+
+  if (!songs.length) { showToast('No songs found — try again'); return; }
+
+  S.songs = songs.map(name => ({name, played:false, custom:false}));
+  S.playedCount = 0;
+
+  $('setlistStatusTitle').textContent = 'Setlist loaded';
+  $('setlistStatusSub').textContent   = `${songs.length} songs · pasted manually`;
+  $('progressWrap').style.display = 'flex';
+
+  renderSongs();
+  updateProgress();
+  switchTab('setlist');
+  $('pasteModal').classList.remove('open');
+  showToast(`${songs.length} songs loaded ✦`);
+});
+
+// ── END SHOW ──
+$('endShowBtn').addEventListener('click', () => {
+  if (document.body.classList.contains('dimmed')) toggleDim();
+  renderPostShow();
+  goTo(2);
+});
+
+function renderPostShow() {
+  $('psArtist').textContent = S.artist;
+  $('psVenue').textContent  = S.venue;
+
+  const played   = S.songs.filter(s=>s.played);
+  const total    = S.songs.length;
+  const moments  = S.moments.length;
+  const duration = total > 0 ? Math.round(total * 3.5) : 0;
+
+  // Stats
+  $('psStats').innerHTML = `
+    <div class="postshow-stat">
+      <div class="postshow-stat-num">${played.length}</div>
+      <div class="postshow-stat-label">Songs</div>
+    </div>
+    <div class="postshow-stat">
+      <div class="postshow-stat-num">${moments}</div>
+      <div class="postshow-stat-label">Moments</div>
+    </div>
+    <div class="postshow-stat">
+      <div class="postshow-stat-num">${duration > 0 ? `~${duration}m` : '—'}</div>
+      <div class="postshow-stat-label">Est. Runtime</div>
+    </div>`;
+
+  // Moments recap
+  if (S.moments.length) {
+    $('psMomentsWrap').style.display = 'block';
+    $('psMomentsList').innerHTML = S.moments.map(m => `
+      <div class="postshow-moment-item">
+        <div class="postshow-moment-time">${m.time}</div>
+        <div class="postshow-moment-text">${m.text}</div>
+      </div>`).join('');
+  } else {
+    $('psMomentsWrap').style.display = 'none';
+  }
+
+  // Played setlist
+  $('psSetlist').innerHTML = played.length
+    ? played.map((s,i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--card-b)">
+          <div style="font-size:10px;color:var(--gold);font-weight:600;width:18px;flex-shrink:0;text-align:right">${i+1}</div>
+          <div style="font-family:var(--display);font-size:15px;color:var(--snow-2)">${s.name}</div>
+        </div>`).join('')
+    : '<div style="font-size:13px;color:var(--snow-3);padding:12px 0;font-style:italic">No songs marked — tap songs in the Setlist tab as they play.</div>';
+
+  // Setlist.fm link
+  $('psSetlistFm').href = `https://www.setlist.fm/search?query=${encodeURIComponent(S.artist)}`;
+}
+
+// Post-show actions
+$('psShare').addEventListener('click', async () => {
+  const played = S.songs.filter(s=>s.played).map((s,i)=>`${i+1}. ${s.name}`);
+  const momentLines = S.moments.map(m=>`${m.time} — ${m.text}`);
+  const text = [
+    `${S.artist} at ${S.venue}`,
+    `${played.length} songs · ${S.moments.length} moments captured`,
+    '',
+    played.length ? 'Setlist:\n'+played.join('\n') : '',
+    S.moments.length ? '\nMoments:\n'+momentLines.join('\n') : '',
+    '\nRecapped with Concerto Concert Mode'
+  ].filter(Boolean).join('\n');
+  try {
+    if (navigator.share) await navigator.share({title:`${S.artist} Recap`, text});
+    else { await navigator.clipboard.writeText(text); showToast('Recap copied ✦'); }
+  } catch { showToast('Share canceled'); }
+});
+
+$('psNewShow').addEventListener('click', () => {
+  S.songs = []; S.moments = []; S.playedCount = 0;
+  $('artistInput').value = ''; $('venueInput').value = '';
+  updateEnterBtn();
+  $('orb1').classList.remove('visible');
+  $('orb2').classList.remove('visible');
+  renderRecent();
+  goTo(0);
+});
+
+$('psConcertoPlus').addEventListener('click', () => {
+  const url = `concerto-plus.html?artist=${encodeURIComponent(S.artist)}&venue=${encodeURIComponent(S.venue)}`;
+  showToast('Opening Concerto+ ✦');
+  setTimeout(() => { window.location.href = url; }, 800);
+});
+
 // ── INIT ──
 renderRecent();
+
+
 </script>
 </body>
 </html>
