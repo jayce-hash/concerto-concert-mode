@@ -46,7 +46,7 @@ button { cursor:pointer; background:none; border:none; color:inherit; font-famil
 a { color:inherit; text-decoration:none; }
 
 /* ── APP SHELL ── */
-#app { height:100dvh; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+#app { height:100vh; display:flex; flex-direction:column; overflow:hidden; position:relative; }
 
 /* ── TOPBAR ── */
 .topbar {
@@ -74,7 +74,7 @@ a { color:inherit; text-decoration:none; }
   position:absolute; inset:0; display:flex; flex-direction:column;
   opacity:0; pointer-events:none;
   transition:opacity .32s var(--spring), transform .32s var(--spring);
-  transform:translateY(14px); overflow:hidden; height:100dvh; z-index:1;
+  transform:translateY(14px); overflow:hidden; height:100vh; z-index:1;
 }
 .screen.active { opacity:1; pointer-events:all; transform:translateY(0); }
 .screen.exit   { opacity:0; transform:translateY(-10px); pointer-events:none; }
@@ -389,7 +389,7 @@ a { color:inherit; text-decoration:none; }
 .caption-btn.save:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(14,26,43,.2); }
 
 /* ══ SCREEN 2 — KEEPSAKE ══ */
-.keepsake-hero { position:relative; width:100%; aspect-ratio:4/3; background:var(--bg-2); overflow:hidden; }
+.keepsake-hero { position:relative; width:100%; height:280px; background:var(--bg-2); overflow:hidden; }
 .keepsake-hero-img { position:absolute; inset:0; background-size:cover; background-position:center; }
 .keepsake-hero-overlay {
   position:absolute; inset:0;
@@ -403,7 +403,7 @@ a { color:inherit; text-decoration:none; }
 .keepsake-eyebrow { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:rgba(248,249,249,.5); margin-bottom:6px; }
 .keepsake-artist  { font-family:var(--display); font-size:34px; font-weight:700; font-style:italic; color:#F8F9F9; line-height:1.05; margin-bottom:4px; }
 .keepsake-venue   { font-size:13px; color:rgba(248,249,249,.65); font-weight:500; }
-.keepsake-stats { display:grid; grid-template-columns:repeat(3,1fr); border-bottom:1px solid var(--card-b); background:var(--card); }
+.keepsake-stats { display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid var(--card-b); background:var(--card); }
 .keepsake-stat { padding:16px 12px; text-align:center; border-right:1px solid var(--card-b); }
 .keepsake-stat:last-child { border-right:none; }
 .keepsake-stat-num   { font-family:var(--display); font-size:26px; color:var(--ink); }
@@ -599,8 +599,10 @@ a { color:inherit; text-decoration:none; }
         <div class="moments-empty-title">Your memories live here</div>
         <div class="moments-empty-sub">Tap to add a photo from tonight. Each one is timestamped and saved to this show.</div>
       </div>
+    </div>
+
     <!-- RECAP -->
-    <div class="tab-panel" id="tab-recap" style="margin:-18px -20px 0;overflow-y:auto;max-height:calc(100dvh - 160px);padding-bottom:60px">
+    <div class="tab-panel" id="tab-recap" style="margin:-18px -20px 0;padding-bottom:60px">
       <div class="keepsake-hero" id="keepsakeHero" style="border-radius:0">
         <div class="keepsake-hero-img" id="keepsakeHeroImg"></div>
         <div class="keepsake-hero-overlay">
@@ -1472,7 +1474,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelector(`.tnav[data-tab="${name}"]`).classList.add('active');
   document.getElementById(`tab-${name}`).classList.add('active');
-  if (name === 'recap') requestAnimationFrame(() => renderKeepsake());
+  if (name === 'recap') setTimeout(() => renderKeepsake(), 50);
 }
 document.querySelectorAll('.tnav').forEach(tab=>tab.addEventListener('click',()=>switchTab(tab.dataset.tab)));
 
@@ -1516,8 +1518,7 @@ function renderKeepsake() {
   // Stats
   $('ksStats').innerHTML = `
     <div class="keepsake-stat"><div class="keepsake-stat-num">${played.length}</div><div class="keepsake-stat-label">Songs</div></div>
-    <div class="keepsake-stat"><div class="keepsake-stat-num">${S.photos.length}</div><div class="keepsake-stat-label">Photos</div></div>
-    <div class="keepsake-stat"><div class="keepsake-stat-num">${played.length>0?`~${Math.round(played.length*3.5)}m`:'—'}</div><div class="keepsake-stat-label">Runtime</div></div>`;
+    <div class="keepsake-stat"><div class="keepsake-stat-num">${S.photos.length}</div><div class="keepsake-stat-label">Photos</div></div>`;
 
   // Extra photos
   const extras = S.photos.slice(1);
