@@ -1144,7 +1144,7 @@ const VENUE_DB = {
 
 // ── SETLIST CMS CONFIG ──
 // Paste your published Google Sheets CSV URL here (Setlists tab)
-const SETLIST_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSm2gnAFEbsug_Bf846-woRhgImNk7bWAHiLjlYHNZQnu89VgX0ZMtlnEVmFISDvw/pub?gid=22117132&single=true&output=csv';
+const SETLIST_CSV_URL = 'PASTE_YOUR_SETLIST_SHEET_URL_HERE';
 
 // Runtime setlist cache — populated on load from Sheets
 const SETLIST_CACHE = {}; // keyed by artist lowercase
@@ -1537,30 +1537,46 @@ function renderKeepsake() {
   } else { $('ksSetlistWrap').style.display='none'; }
 }
 
-// ── CONCERT ROUTE CARD (Strava-style) ──
+// ── STORY CARD ──
 $('psInstagram').addEventListener('click', generateStoryCard);
 
 async function generateStoryCard() {
-  showToast('Generating your recap…');
+  showToast('Generating your card…');
   await document.fonts.ready;
+
+  // Force font registration into canvas context before drawing
+  const testCanvas = document.createElement('canvas');
+  const testCtx = testCanvas.getContext('2d');
+  testCtx.font = 'italic 700 48px "Playfair Display", Georgia, serif';
+  testCtx.fillText('\u200b', 0, 0);
+  testCtx.font = '600 32px "DM Sans", sans-serif';
+  testCtx.fillText('\u200b', 0, 0);
+  await new Promise(r => setTimeout(r, 120));
 
   const canvas = $('storyCanvas');
   const ctx    = canvas.getContext('2d');
   const W = 1080, H = 1920;
   canvas.width = W; canvas.height = H;
 
-  const played   = S.songs.filter(s => s.played);
-  const dateStr  = new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
-  const SNOW     = '#F8F9F9';
-  const NAVY     = '#0E1A2B';
+  // Always show the full setlist count — songs heard = total setlist
+  const allSongs = S.songs.length ? S.songs : [];
+  const trackedPlayed = allSongs.filter(s => s.played);
+  // For highlights: use what they tracked, or fall back to full list
+  const played = trackedPlayed.length > 0 ? trackedPlayed : allSongs;
+
+  const dateStr = new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'});
+  const SNOW = '#F8F9F9';
+  const NAVY = '#0E1A2B';
 
   // ── BACKGROUND ──
-  if (S.photos.length) {
+  const hasPhoto = S.photos.length > 0;
+
+  if (hasPhoto) {
+    // Full-bleed photo top 58% of card
     await new Promise(resolve => {
       const img = new Image();
       img.onload = () => {
-        // Draw photo cropped to top third
-        const ph = H * 0.38;
+        const ph = H * 0.58;
         const scale = Math.max(W / img.width, ph / img.height);
         const sw = img.width * scale, sh = img.height * scale;
         ctx.drawImage(img, (W - sw) / 2, 0, sw, sh);
@@ -1569,270 +1585,200 @@ async function generateStoryCard() {
       img.onerror = resolve;
       img.src = S.photos[0].dataUrl;
     });
-    // Gradient over photo → solid navy
-    const grad = ctx.createLinearGradient(0, 0, 0, H * 0.42);
-    grad.addColorStop(0,   'rgba(14,26,43,0.35)');
-    grad.addColorStop(0.6, 'rgba(14,26,43,0.82)');
-    grad.addColorStop(1,   'rgba(14,26,43,1)');
+    // Heavy gradient: transparent top → solid navy by 62%
+    const grad = ctx.createLinearGradient(0, 0, 0, H * 0.65);
+    grad.addColorStop(0,    'rgba(14,26,43,0.18)');
+    grad.addColorStop(0.45, 'rgba(14,26,43,0.72)');
+    grad.addColorStop(0.75, 'rgba(14,26,43,0.97)');
+    grad.addColorStop(1,    'rgba(14,26,43,1)');
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H * 0.42);
-    // Rest solid navy
+    ctx.fillRect(0, 0, W, H * 0.65);
+    // Solid navy remainder
     ctx.fillStyle = NAVY;
-    ctx.fillRect(0, H * 0.42, W, H * 0.58);
+    ctx.fillRect(0, H * 0.65, W, H * 0.35);
   } else {
+    // No photo: full navy with a soft top-center glow (pre-show state)
     ctx.fillStyle = NAVY;
     ctx.fillRect(0, 0, W, H);
-    // Subtle radial glow top right
-    const glow = ctx.createRadialGradient(W * 0.8, H * 0.1, 0, W * 0.8, H * 0.1, W * 0.6);
-    glow.addColorStop(0, 'rgba(248,249,249,0.06)');
+    const glow = ctx.createRadialGradient(W / 2, H * 0.22, 0, W / 2, H * 0.22, W * 0.75);
+    glow.addColorStop(0, 'rgba(248,249,249,0.055)');
     glow.addColorStop(1, 'transparent');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
   }
 
-  // Noise texture overlay (subtle grain)
-  for (let i = 0; i < 6000; i++) {
+  // Grain overlay
+  for (let i = 0; i < 7000; i++) {
     const x = Math.random() * W, y = Math.random() * H;
-    const a = Math.random() * 0.03;
-    ctx.fillStyle = `rgba(248,249,249,${a})`;
+    ctx.fillStyle = `rgba(248,249,249,${Math.random() * 0.028})`;
     ctx.fillRect(x, y, 1, 1);
   }
 
-  // ── TOP BAR ──
+  // ── TOP BAR — wordmark ──
   ctx.textAlign = 'left';
-  ctx.font = '600 36px "DM Sans", sans-serif';
-  ctx.fillStyle = 'rgba(248,249,249,0.9)';
-  ctx.fillText('Concerto', 80, 110);
-  ctx.font = '600 20px "DM Sans", sans-serif';
-  ctx.fillStyle = 'rgba(248,249,249,0.35)';
-  ctx.fillText('LIVE MODE', 80, 142);
+  ctx.font = `italic 700 58px "Playfair Display", Georgia, serif`;
+  ctx.fillStyle = 'rgba(248,249,249,0.92)';
+  ctx.fillText('Concerto', 80, 116);
+  // Thin rule under wordmark
+  ctx.strokeStyle = 'rgba(248,249,249,0.14)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(80, 134); ctx.lineTo(80 + 220, 134); ctx.stroke();
 
-  // ── ARTIST NAME ──
-  const artistFontSize = S.artist.length > 16 ? 100 : S.artist.length > 10 ? 118 : 136;
-  ctx.font = `italic 700 ${artistFontSize}px "Playfair Display", Georgia, serif`;
+  // ── ARTIST NAME — main headline ──
+  // Scale font to fit, left-aligned, large and italic
+  const maxArtistW = W - 160;
+  let artistSize = S.artist.length > 18 ? 108 : S.artist.length > 12 ? 128 : 152;
+  ctx.font = `italic 700 ${artistSize}px "Playfair Display", Georgia, serif`;
+  // Reduce until fits
+  while (ctx.measureText(S.artist).width > maxArtistW && artistSize > 72) {
+    artistSize -= 6;
+    ctx.font = `italic 700 ${artistSize}px "Playfair Display", Georgia, serif`;
+  }
   ctx.fillStyle = SNOW;
-  // Word-wrap
+
+  // Word-wrap artist name
   const artistWords = S.artist.split(' ');
-  let aLine = '', aY = 360, aLineH = artistFontSize * 1.08;
+  let aLine = '', aLines = [];
   for (const w of artistWords) {
     const test = aLine ? `${aLine} ${w}` : w;
-    if (ctx.measureText(test).width > W - 160 && aLine) {
-      ctx.fillText(aLine, 80, aY); aLine = w; aY += aLineH;
+    if (ctx.measureText(test).width > maxArtistW && aLine) {
+      aLines.push(aLine); aLine = w;
     } else aLine = test;
   }
-  ctx.fillText(aLine, 80, aY);
-  aY += 52;
+  aLines.push(aLine);
 
-  // Venue + date
-  ctx.font = '500 40px "DM Sans", sans-serif';
-  ctx.fillStyle = 'rgba(248,249,249,0.6)';
+  // Position: if photo, anchor artist name near bottom of photo zone
+  // If no photo, center in top half
+  const aLineH = artistSize * 1.1;
+  let aStartY = hasPhoto ? H * 0.56 - aLines.length * aLineH + aLineH * 0.9
+                         : H * 0.30;
+
+  aLines.forEach((line, i) => {
+    ctx.fillText(line, 80, aStartY + i * aLineH);
+  });
+  let curY = aStartY + aLines.length * aLineH + 24;
+
+  // ── VENUE + DATE ──
+  ctx.font = '500 38px "DM Sans", sans-serif';
+  ctx.fillStyle = 'rgba(248,249,249,0.62)';
   let venueLine = S.venue;
-  while (ctx.measureText(venueLine).width > W - 160 && venueLine.length > 4)
+  ctx.font = '500 38px "DM Sans", sans-serif';
+  while (ctx.measureText(venueLine).width > maxArtistW && venueLine.length > 4)
     venueLine = venueLine.slice(0, -1);
   if (venueLine !== S.venue) venueLine += '…';
-  ctx.fillText(venueLine, 80, aY + 10);
-  ctx.font = '400 32px "DM Sans", sans-serif';
-  ctx.fillStyle = 'rgba(248,249,249,0.32)';
-  ctx.fillText(dateStr, 80, aY + 58);
+  ctx.fillText(venueLine, 80, curY);
+  curY += 50;
 
-  // ── ROUTE SECTION ──
-  const ROUTE_X   = 120;    // x of the vertical line
-  const ROUTE_TOP = aY + 130;
-  const ROUTE_BOT = H - 280;
-  const ROUTE_H   = ROUTE_BOT - ROUTE_TOP;
-  const MAX_SONGS = S.songs.length || 1;
+  ctx.font = '400 30px "DM Sans", sans-serif';
+  ctx.fillStyle = 'rgba(248,249,249,0.35)';
+  ctx.fillText(dateStr, 80, curY);
+  curY += 72;
 
-  // Draw the vertical route line — glowing, fading toward bottom
-  const lineGrad = ctx.createLinearGradient(0, ROUTE_TOP, 0, ROUTE_BOT);
-  lineGrad.addColorStop(0,   'rgba(248,249,249,0.7)');
-  lineGrad.addColorStop(0.5, 'rgba(248,249,249,0.45)');
-  lineGrad.addColorStop(1,   'rgba(248,249,249,0.08)');
-
-  // Dashed background track
-  ctx.strokeStyle = 'rgba(248,249,249,0.08)';
-  ctx.lineWidth = 3;
-  ctx.setLineDash([8, 14]);
-  ctx.beginPath();
-  ctx.moveTo(ROUTE_X, ROUTE_TOP);
-  ctx.lineTo(ROUTE_X, ROUTE_BOT);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Solid played portion
-  if (played.length && S.songs.length) {
-    const playedRatio = played.length / MAX_SONGS;
-    const solidGrad = ctx.createLinearGradient(0, ROUTE_TOP, 0, ROUTE_TOP + ROUTE_H * playedRatio);
-    solidGrad.addColorStop(0,   'rgba(248,249,249,0.85)');
-    solidGrad.addColorStop(0.7, 'rgba(248,249,249,0.55)');
-    solidGrad.addColorStop(1,   'rgba(248,249,249,0.25)');
-    ctx.strokeStyle = solidGrad;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(ROUTE_X, ROUTE_TOP);
-    ctx.lineTo(ROUTE_X, ROUTE_TOP + ROUTE_H * playedRatio);
-    ctx.stroke();
-  }
-
-  // Draw song dots + labels along the route
-  const displaySongs = S.songs.slice(0, Math.min(S.songs.length, 18));
-  const photoMap = {}; // songIndex → photo
-  if (S.photos.length > 1) {
-    // Spread extra photos along the route
-    const extras = S.photos.slice(1, 4);
-    extras.forEach((p, i) => {
-      const idx = Math.floor((i + 1) * (displaySongs.length / (extras.length + 1)));
-      photoMap[idx] = p;
-    });
-  }
-
-  for (let i = 0; i < displaySongs.length; i++) {
-    const song    = displaySongs[i];
-    const ratio   = displaySongs.length > 1 ? i / (displaySongs.length - 1) : 0;
-    const dotY    = ROUTE_TOP + ROUTE_H * ratio;
-    const isFirst = i === 0;
-    const isLast  = i === displaySongs.length - 1;
-    const isMid   = i === Math.floor(displaySongs.length / 2);
-    const isKey   = isFirst || isLast || isMid;
-    const alpha   = song.played ? 1 : 0.22;
-
-    // Glow for key played songs
-    if (isKey && song.played) {
-      ctx.beginPath();
-      ctx.arc(ROUTE_X, dotY, 24, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(248,249,249,0.12)`;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(ROUTE_X, dotY, 16, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(248,249,249,0.18)`;
-      ctx.fill();
-    }
-
-    // Dot
-    const dotR = isKey ? 9 : 5;
-    ctx.beginPath();
-    ctx.arc(ROUTE_X, dotY, dotR, 0, Math.PI * 2);
-    ctx.fillStyle = song.played
-      ? `rgba(248,249,249,${isKey ? 1 : 0.75})`
-      : `rgba(248,249,249,0.15)`;
-    ctx.fill();
-
-    // Connector tick
-    if (!isKey) {
-      ctx.strokeStyle = `rgba(248,249,249,${alpha * 0.4})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(ROUTE_X + dotR, dotY);
-      ctx.lineTo(ROUTE_X + 24, dotY);
-      ctx.stroke();
-    }
-
-    // Song label — only for played songs, key moments, or first/last
-    if (song.played || isFirst || isLast) {
-      const labelX = ROUTE_X + (isKey ? 40 : 30);
-      const labelAlpha = song.played ? (isKey ? 1 : 0.65) : 0.25;
-
-      if (isKey && song.played) {
-        // Big label
-        ctx.font = `italic 500 ${isFirst ? 46 : 38}px "Playfair Display", Georgia, serif`;
-        ctx.fillStyle = `rgba(248,249,249,${labelAlpha})`;
-        ctx.textAlign = 'left';
-        let label = song.name;
-        while (ctx.measureText(label).width > W - labelX - 80 && label.length > 4)
-          label = label.slice(0, -1);
-        if (label !== song.name) label += '…';
-        ctx.fillText(label, labelX, dotY + 14);
-
-        // Key badge
-        if (isFirst) {
-          ctx.font = '600 18px "DM Sans", sans-serif';
-          ctx.fillStyle = 'rgba(248,249,249,0.35)';
-          ctx.fillText('OPENER', labelX, dotY - 14);
-        } else if (isLast && isLast !== isFirst) {
-          ctx.font = '600 18px "DM Sans", sans-serif';
-          ctx.fillStyle = 'rgba(248,249,249,0.35)';
-          ctx.fillText('CLOSER', labelX, dotY - 14);
-        } else if (isMid) {
-          ctx.font = '600 18px "DM Sans", sans-serif';
-          ctx.fillStyle = 'rgba(248,249,249,0.35)';
-          ctx.fillText('MIDPOINT', labelX, dotY - 14);
-        }
-      } else if (song.played) {
-        // Small label
-        ctx.font = '400 28px "Playfair Display", Georgia, serif';
-        ctx.fillStyle = `rgba(248,249,249,${labelAlpha})`;
-        ctx.textAlign = 'left';
-        let label = song.name;
-        while (ctx.measureText(label).width > W - labelX - 80 && label.length > 4)
-          label = label.slice(0, -1);
-        if (label !== song.name) label += '…';
-        ctx.fillText(label, labelX, dotY + 10);
-      }
-    }
-
-    // Inline photo thumbnail for certain songs
-    if (photoMap[i]) {
-      await new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => {
-          const PW = 180, PH = 180;
-          const px = W - PW - 80;
-          const py = dotY - PH / 2;
-          // Polaroid bg
-          ctx.fillStyle = 'rgba(248,249,249,0.1)';
-          roundRect(ctx, px - 8, py - 8, PW + 16, PH + 16, 16);
-          ctx.fill();
-          // Photo
-          ctx.save();
-          roundRect(ctx, px, py, PW, PH, 10);
-          ctx.clip();
-          ctx.drawImage(img, px, py, PW, PH);
-          ctx.restore();
-          // Connector line to route
-          ctx.strokeStyle = 'rgba(248,249,249,0.18)';
-          ctx.lineWidth = 1.5;
-          ctx.setLineDash([4, 6]);
-          ctx.beginPath();
-          ctx.moveTo(ROUTE_X + 10, dotY);
-          ctx.lineTo(px - 8, dotY);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          resolve();
-        };
-        img.onerror = resolve;
-        img.src = photoMap[i].dataUrl;
-      });
-    }
-  }
-
-  // ── STATS STRIP ──
-  const statsY = H - 220;
-  ctx.strokeStyle = 'rgba(248,249,249,0.12)';
+  // ── FULL-WIDTH RULE ──
+  ctx.strokeStyle = 'rgba(248,249,249,0.10)';
   ctx.lineWidth = 1;
-  ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(80, statsY - 20); ctx.lineTo(W - 80, statsY - 20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(80, curY); ctx.lineTo(W - 80, curY); ctx.stroke();
+  curY += 72;
 
-  const stats = [
-    { num: played.length,                            label: 'SONGS' },
-    { num: S.songs.length > 0 ? `${Math.round((played.length / S.songs.length) * 100)}%` : '—', label: 'COMPLETE' },
-    { num: S.photos.length,                          label: 'PHOTOS' },
+  // ── DOMINANT STAT — songs heard ──
+  const songCount = allSongs.length;
+  ctx.textAlign = 'left';
+  ctx.font = `italic 700 220px "Playfair Display", Georgia, serif`;
+  ctx.fillStyle = SNOW;
+  ctx.fillText(String(songCount || '—'), 72, curY + 196);
+
+  ctx.font = '500 38px "DM Sans", sans-serif';
+  ctx.fillStyle = 'rgba(248,249,249,0.40)';
+  ctx.fillText(songCount === 1 ? 'SONG' : 'SONGS', 80, curY + 256);
+  curY += 320;
+
+  // ── SETLIST HIGHLIGHTS — editorial, typographic ──
+  if (played.length >= 1) {
+    const highlights = [];
+    const opener = played[0];
+    const closer = played[played.length - 1];
+    const mid    = played.length > 2 ? played[Math.floor(played.length / 2)] : null;
+
+    highlights.push({ label: 'OPENER', song: opener });
+    if (mid && mid !== opener && mid !== closer)
+      highlights.push({ label: 'HIGHLIGHT', song: mid });
+    if (closer !== opener)
+      highlights.push({ label: 'CLOSER', song: closer });
+
+    highlights.forEach(({ label, song }, idx) => {
+      // Thin rule before each (except first)
+      if (idx > 0) {
+        ctx.strokeStyle = 'rgba(248,249,249,0.07)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(80, curY - 8); ctx.lineTo(W - 80, curY - 8); ctx.stroke();
+        curY += 12;
+      }
+
+      // Label — small, muted, tracked
+      ctx.textAlign = 'left';
+      ctx.font = '500 22px "DM Sans", sans-serif';
+      ctx.fillStyle = 'rgba(248,249,249,0.28)';
+      ctx.fillText(label, 80, curY + 22);
+      curY += 34;
+
+      // Song name — italic, clean
+      ctx.font = `italic 500 54px "Playfair Display", Georgia, serif`;
+      ctx.fillStyle = SNOW;
+      let sname = song.name;
+      while (ctx.measureText(sname).width > maxArtistW && sname.length > 4)
+        sname = sname.slice(0, -1);
+      if (sname !== song.name) sname += '…';
+      ctx.fillText(sname, 80, curY + 50);
+      curY += 76;
+    });
+  } else {
+    // Pre-show: no setlist yet — show a placeholder line
+    ctx.textAlign = 'left';
+    ctx.font = `italic 400 48px "Playfair Display", Georgia, serif`;
+    ctx.fillStyle = 'rgba(248,249,249,0.22)';
+    ctx.fillText('The night awaits.', 80, curY + 48);
+    curY += 80;
+  }
+
+  // ── SECONDARY STATS ROW — anchored above footer ──
+  const footerH = 140;
+  const statsY = H - footerH - 130;
+
+  ctx.strokeStyle = 'rgba(248,249,249,0.10)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(80, statsY); ctx.lineTo(W - 80, statsY); ctx.stroke();
+
+  const secStats = [
+    { num: allSongs.length || '—', label: 'SETLIST' },
+    { num: S.photos.length || '—', label: 'PHOTOS'  },
   ];
-  const colW = (W - 160) / stats.length;
-  stats.forEach((st, i) => {
-    const sx = 80 + i * colW + colW / 2;
-    ctx.textAlign = 'center';
+  const colW = (W - 160) / 2;
+  secStats.forEach((st, i) => {
+    const sx = 80 + i * colW;
+    ctx.textAlign = 'left';
     ctx.font = `700 72px "Playfair Display", Georgia, serif`;
     ctx.fillStyle = SNOW;
-    ctx.fillText(String(st.num), sx, statsY + 56);
-    ctx.font = '600 22px "DM Sans", sans-serif';
-    ctx.fillStyle = 'rgba(248,249,249,0.35)';
-    ctx.fillText(st.label, sx, statsY + 90);
+    ctx.fillText(String(st.num), sx, statsY + 82);
+    ctx.font = '500 22px "DM Sans", sans-serif';
+    ctx.fillStyle = 'rgba(248,249,249,0.32)';
+    ctx.fillText(st.label, sx, statsY + 114);
   });
 
   // ── FOOTER ──
-  ctx.textAlign = 'center';
+  ctx.strokeStyle = 'rgba(248,249,249,0.10)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(80, H - footerH); ctx.lineTo(W - 80, H - footerH); ctx.stroke();
+
+  ctx.textAlign = 'left';
   ctx.font = '500 28px "DM Sans", sans-serif';
-  ctx.fillStyle = 'rgba(248,249,249,0.28)';
-  ctx.fillText(`${dateStr}  ·  @theconcertoapp`, W / 2, H - 60);
+  ctx.fillStyle = 'rgba(248,249,249,0.65)';
+  ctx.fillText('@theconcertoapp', 80, H - footerH + 52);
+
+  ctx.textAlign = 'right';
+  ctx.font = '400 26px "DM Sans", sans-serif';
+  ctx.fillStyle = 'rgba(248,249,249,0.30)';
+  ctx.fillText('concertocity.com', W - 80, H - footerH + 52);
 
   // ── EXPORT ──
   const dataUrl = canvas.toDataURL('image/jpeg', 0.93);
