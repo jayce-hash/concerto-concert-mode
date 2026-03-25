@@ -89,15 +89,18 @@ a { color:inherit; text-decoration:none; }
 .scroll-area::-webkit-scrollbar { display:none; }
 
 /* ══ SCREEN 0 — SETUP / SCRAPBOOK ══ */
-.setup-eyebrow {
+.eyebrow {
   font-size:10px; font-weight:600; letter-spacing:.2em;
   color:var(--ink-3); text-transform:uppercase; margin-bottom:10px; margin-top:24px;
 }
-.setup-headline {
+.headline {
   font-family:var(--display); font-size:34px; font-weight:700; line-height:1.08;
-  color:var(--ink); letter-spacing:-.01em; margin-bottom:24px;
+  color:var(--ink); letter-spacing:-.01em; margin-bottom:6px;
 }
-.setup-headline em { font-style:italic; color:var(--ink-2); }
+.headline em { font-style:italic; color:var(--ink-2); }
+.sub {
+  font-size:14px; color:var(--ink-3); line-height:1.6; margin-bottom:28px;
+}
 .field-label {
   font-size:10px; font-weight:600; letter-spacing:.16em;
   text-transform:uppercase; color:var(--ink-3); margin-bottom:7px;
@@ -495,7 +498,7 @@ a { color:inherit; text-decoration:none; }
 #storyCanvas { display:none; }
 
 @media (max-width:400px) {
-  .setup-headline { font-size:28px; }
+  .headline { font-size:28px; }
   .keepsake-artist { font-size:28px; }
 }
 </style>
@@ -516,9 +519,9 @@ a { color:inherit; text-decoration:none; }
     <button class="icon-btn" id="helpBtn" title="How it works" style="font-size:13px">?</button>
   </div>
   <div class="scroll-area">
-    <div class="setup-eyebrow">You're here. Let's go.</div>
-    <h1 class="setup-headline">What show are<br>you at <em>tonight?</em></h1>
-    <div class="field-label">Artist</div>
+    <div class="eyebrow">You're here. Let's go.</div>
+    <h1 class="headline">What show are<br>you at <em>tonight?</em></h1>
+    <div style="margin-bottom: 28px;"></div> <div class="field-label">Artist</div>
     <div class="dropdown-wrap" id="artistWrap">
       <input class="light-input" id="artistInput" type="text" placeholder="Search artists…" autocomplete="off" autocorrect="off" spellcheck="false"/>
       <div class="dropdown-list" id="artistDropdown" style="display:none"></div>
